@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Pedidos
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="cabecalho-pagina">
+
+    <div>
+
+        <h1>
+            Pedidos
+        </h1>
+
+        <p>
+            Acompanhe os pedidos do restaurante.
+        </p>
+
+    </div>
+
+    <a
+        class="botao secundario"
+        href="{{ url_for('pedido.exportar') }}"
+    >
+        Exportar Excel
+    </a>
+
+</div>
+
+
+<div class="tabela-wrapper">
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>Número</th>
+                <th>Data e hora</th>
+                <th>Funcionário</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th></th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for p in pedidos %}
+
+            <tr>
+
+                <td>
+                    #{{ p.id }}
+                </td>
+
+                <td>
+                    {{ p.criado_em }}
+                </td>
+
+                <td>
+                    {{ p.funcionario_nome }}
+                </td>
+
+                <td>
+                    {{ p.status }}
+                </td>
+
+                <td>
+                    <strong>
+                        {{ p.total_centavos|moeda }}
+                    </strong>
+                </td>
+
+                <td>
+
+                    <a
+                        href="{{
+                            url_for(
+                                'pedido.detalhes',
+                                pedido_id=p.id
+                            )
+                        }}"
+                    >
+                        Detalhes
+                    </a>
+
+                </td>
+
+            </tr>
+
+            {% else %}
+
+            <tr>
+
+                <td
+                    colspan="6"
+                    class="vazio"
+                >
+                    Nenhum pedido registrado.
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

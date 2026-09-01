@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Entrar · Restaurante Fácil
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>Bem-vindo</h1>
+
+    <p>
+        Entre para gerenciar o restaurante.
+    </p>
+
+    <form
+        method="post"
+        class="formulario"
+    >
+
+        <!-- Usuário do funcionário. -->
+        <label>
+            Usuário
+
+            <input
+                name="usuario"
+                required
+                autofocus
+                autocomplete="username"
+            >
+        </label>
+
+        <!-- Senha do funcionário. -->
+        <label>
+            Senha
+
+            <input
+                type="password"
+                name="senha"
+                required
+                autocomplete="current-password"
+            >
+        </label>
+
+        <button
+            class="botao primario"
+            type="submit"
+        >
+            Entrar
+        </button>
+
+    </form>
+
+    <p class="ajuda">
+        Primeiro acesso:
+        <strong>admin</strong> /
+        <strong>admin123</strong>
+    </p>
+
+    <p>
+        <a href="{{ url_for('auth.cadastro') }}">
+            Cadastrar funcionário
+        </a>
+    </p>
+
+</section>
+
+{% endblock %}

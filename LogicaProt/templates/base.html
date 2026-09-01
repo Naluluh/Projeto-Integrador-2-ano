@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+
+    <!-- Define a codificação da página. -->
+    <meta charset="utf-8">
+
+    <!-- Faz a página se adaptar a telas menores. -->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <!-- Permite que cada página defina seu próprio título. -->
+    <title>
+        {% block titulo %}Restaurante Online{% endblock %}
+    </title>
+
+    <!-- Carrega o CSS da aplicação. -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header class="topo">
+
+    <!-- Se estiver logado, vai para o painel.
+         Caso contrário, vai para o login. -->
+    <a
+        class="marca"
+        href="{{
+            url_for('main.inicio')
+            if session.get('funcionario_id')
+            else url_for('auth.login')
+        }}"
+    >
+        Restaurante Fácil
+    </a>
+
+    {% if session.get('funcionario_id') %}
+
+    <!-- Menu disponível para funcionários autenticados. -->
+    <nav aria-label="Navegação principal">
+
+        <a href="{{ url_for('main.inicio') }}">
+            Início
+        </a>
+
+        <a href="{{ url_for('prato.listar') }}">
+            Pratos
+        </a>
+
+        <a href="{{ url_for('ingrediente.listar') }}">
+            Ingredientes
+        </a>
+
+        <a href="{{ url_for('pedido.novo') }}">
+            Novo pedido
+        </a>
+
+        <a href="{{ url_for('pedido.listar') }}">
+            Pedidos
+        </a>
+
+        <!-- Logout utiliza POST para alterar o estado da sessão. -->
+        <form
+            method="post"
+            action="{{ url_for('auth.logout') }}"
+        >
+            <button class="link-button">
+                Sair
+            </button>
+        </form>
+
+    </nav>
+
+    {% endif %}
+
+</header>
+
+<main class="container">
+
+    <!-- Recupera mensagens enviadas pelos Controllers. -->
+    {% with mensagens = get_flashed_messages(
+        with_categories=true
+    ) %}
+
+        {% for categoria, mensagem in mensagens %}
+
+            <div
+                class="alerta {{ categoria }}"
+                role="alert"
+            >
+                {{ mensagem }}
+            </div>
+
+        {% endfor %}
+
+    {% endwith %}
+
+    <!-- Conteúdo específico de cada página. -->
+    {% block conteudo %}{% endblock %}
+
+</main>
+
+<footer>
+    Projeto didático · Flask, Jinja2, SQLite e MVC
+</footer>
+
+</body>
+</html>
