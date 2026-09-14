@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Painel
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="cabecalho-pagina">
+
+    <div>
+
+        <!-- Nome do funcionário atualmente logado. -->
+        <h1>
+            Olá, {{ session.funcionario_nome }}
+        </h1>
+
+        <!-- Cargo armazenado na sessão. -->
+        <p>
+            Cargo: {{ session.cargo }}
+        </p>
+
+        <p>
+            Visão geral do restaurante.
+        </p>
+
+    </div>
+
+</div>
+
+<section class="cards">
+
+    <article class="card">
+
+        <span>
+            Pratos cadastrados
+        </span>
+
+        <strong>
+            {{ total_pratos }}
+        </strong>
+
+        <a href="{{ url_for('prato.listar') }}">
+            Gerenciar pratos →
+        </a>
+
+    </article>
+
+
+    <article class="card">
+
+        <span>
+            Ingredientes cadastrados
+        </span>
+
+        <strong>
+            {{ total_ingredientes }}
+        </strong>
+
+        <a href="{{ url_for('ingrediente.listar') }}">
+            Gerenciar ingredientes →
+        </a>
+
+    </article>
+
+
+    <article class="card destaque">
+
+        <span>
+            Pedidos registrados
+        </span>
+
+        <strong>
+            {{ total_pedidos }}
+        </strong>
+
+        <a href="{{ url_for('pedido.listar') }}">
+            Ver pedidos →
+        </a>
+
+    </article>
+
+
+    <article class="card destaque">
+
+        <span>
+            Atendimento
+        </span>
+
+        <strong>
+            Novo pedido
+        </strong>
+
+        <a href="{{ url_for('pedido.novo') }}">
+            Abrir pedido →
+        </a>
+
+    </article>
+
+</section>
+
+{% endblock %}
