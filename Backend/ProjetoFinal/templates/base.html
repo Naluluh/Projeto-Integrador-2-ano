@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+
+    <!-- Define a codificação da página. -->
+    <meta charset="utf-8">
+
+    <!-- Faz a página se adaptar a telas menores. -->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <!-- Permite que cada página defina seu próprio título. -->
+    <title>
+        {% block titulo %}Sabor & Clic{% endblock %}
+    </title>
+
+    <!-- Carrega o CSS da aplicação. -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header class="topo">
+
+    <!--
+        Se estiver logado, vai para o início.
+        Caso contrário, vai para o login.
+    -->
+    <a
+        class="marca"
+        href="{{
+            url_for('main.inicio')
+            if session.get('usuario_id')
+            else url_for('auth.login')
+        }}"
+    >
+        Sabor & Clic
+    </a>
+
+
+    {% if session.get('usuario_id') %}
+
+    <!-- ====================================================
+         MENU DO USUÁRIO LOGADO
+         ==================================================== -->
+
+    <nav aria-label="Navegação principal">
+
+        <!-- Página inicial -->
+        <a href="{{ url_for('main.inicio') }}">
+            Início
+        </a>
+
+
+        <!-- Pratos -->
+        <a href="{{ url_for('prato.listar') }}">
+            Pratos
+        </a>
+
+
+        <!-- Novo pedido -->
+        <a href="{{ url_for('pedido.novo') }}">
+            Novo pedido
+        </a>
+
+
+        <!-- Pedidos -->
+        <a href="{{ url_for('pedido.listar') }}">
+            Pedidos
+        </a>
+
+
+        <!--
+            A área de usuários aparece somente
+            para administradores.
+        -->
+        {% if session.get('cargo') == 'administrador' %}
+
+            <a href="{{ url_for('usuario.listar') }}">
+                Usuários
+            </a>
+
+            <!-- Ingredientes -->
+        <a href="{{ url_for('ingrediente.listar') }}">
+            Ingredientes
+        </a>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             INFORMAÇÕES DO USUÁRIO
+             ================================================= -->
+
+        <span class="usuario-logado">
+
+            {{ session.get('usuario_nome') }}
+
+            <small>
+                ({{ session.get('cargo') }})
+            </small>
+
+        </span>
+
+
+        <!--
+            Logout utiliza POST para alterar
+            o estado da sessão.
+        -->
+        <form
+            method="post"
+            action="{{ url_for('auth.logout') }}"
+        >
+
+            <button
+                type="submit"
+                class="link-button"
+            >
+                Sair
+            </button>
+
+        </form>
+
+    </nav>
+
+    {% endif %}
+
+</header>
+
+
+<main class="container">
+
+    <!--
+        Recupera mensagens enviadas pelos Controllers.
+    -->
+    {% with mensagens = get_flashed_messages(
+        with_categories=true
+    ) %}
+
+        {% for categoria, mensagem in mensagens %}
+
+            <div
+                class="alerta {{ categoria }}"
+                role="alert"
+            >
+                {{ mensagem }}
+            </div>
+
+        {% endfor %}
+
+    {% endwith %}
+
+
+    <!-- Conteúdo específico de cada página. -->
+    {% block conteudo %}{% endblock %}
+
+</main>
+
+
+<footer>
+
+    Projeto integrador ·
+    Disciplinas técnicas ·
+    2° ano
+
+</footer>
+
+</body>
+
+</html>

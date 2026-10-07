@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block titulo %}Usuários - Sabor & Clic{% endblock %}
+
+{% block conteudo %}
+
+<section class="pagina">
+
+```
+<div class="cabecalho-pagina">
+    <h1>Usuários cadastrados</h1>
+    <p>Lista de usuários registrados no sistema.</p>
+</div>
+
+{% if usuarios %}
+
+    <div class="tabela-container">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Usuário</th>
+                    <th>Cargo</th>
+                    <th>Data de cadastro</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for usuario in usuarios %}
+
+                    <tr>
+                        <td>{{ usuario["id"] }}</td>
+
+                        <td>{{ usuario["nome"] }}</td>
+
+                        <td>{{ usuario["usuario"] }}</td>
+
+                        <td>
+                            {{ usuario["cargo"]|capitalize }}
+                        </td>
+
+                        <td>{{ usuario["criado_em"] }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+{% else %}
+
+    <div class="vazio">
+        <h2>Nenhum usuário cadastrado</h2>
+
+        <p>
+            Não existem usuários para exibir.
+        </p>
+    </div>
+
+{% endif %}
+```
+
+</section>
+
+{% endblock %}
