@@ -44,3 +44,151 @@ def formatar_moeda(centavos):
         .replace(".", ",")
         .replace("X", ".")
     )
+
+"""Decoradores utilizados para controle de acesso."""
+
+from functools import wraps
+
+from flask import (
+    flash,
+    redirect,
+    session,
+    url_for
+)
+
+
+def login_required(funcao):
+    """
+    Permite o acesso somente a usuários autenticados.
+    """
+
+    @wraps(funcao)
+    def verificar_login(*args, **kwargs):
+
+        # Verifica se existe um funcionário autenticado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for(
+                    "auth.login",
+                    proxima="/"
+                )
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_login
+
+
+def administrador_required(funcao):
+    """
+    Permite o acesso somente a administradores.
+    """
+
+    @wraps(funcao)
+    def verificar_administrador(*args, **kwargs):
+
+        # Primeiro verifica se existe alguém logado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("auth.login")
+            )
+
+        # Depois verifica o cargo armazenado na sessão.
+        if session.get("cargo") != "administrador":
+
+            flash(
+                "Você não tem permissão para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("main.inicio")
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_administrador
+
+def cozinheiro_required(funcao):
+    """
+    Permite o acesso somente a cozinheiros.
+    """
+
+    @wraps(funcao)
+    def verificar_cozinheiro(*args, **kwargs):
+
+        # Primeiro verifica se existe alguém logado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("auth.login")
+            )
+
+        # Depois verifica o cargo armazenado na sessão.
+        if session.get("cargo") != "cozinheiro":
+
+            flash(
+                "Você não tem permissão para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("main.inicio")
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_cozinheiro
+
+def cliente_required(funcao):
+    """
+    Permite o acesso somente a clientes.
+    """
+
+    @wraps(funcao)
+    def verificar_cliente(*args, **kwargs):
+
+        # Primeiro verifica se existe alguém logado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("auth.login")
+            )
+
+        # Depois verifica o cargo armazenado na sessão.
+        if session.get("cargo") != "cliente":
+
+            flash(
+                "Você não tem permissão para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("main.inicio")
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_cliente

@@ -35,7 +35,7 @@ Novo pedido
             Prato
 
             <select
-                name="prato_id"
+                name="produto_id"
                 required
             >
 
@@ -201,21 +201,37 @@ Novo pedido
 
         </form>
 
-
-        <form
-            method="post"
-            action="{{ url_for('pedido.finalizar') }}"
-        >
-
-            <button
+         <button
                 class="botao primario"
-                {{ 'disabled' if not carrinho }}
-            >
-                Registrar pedido
-            </button>
+                {{ 'disabled' if not carrinho }} 
+                id="registrar_pedido"
+                type="button"
+        >
+            Registrar pedido
+        </button>
 
+        <form method="post" action="{{ url_for('pedido.finalizar') }}">
+
+            <div id="confirmacao_pedido" class="painel">
+                <h3>CONFIRMAR ENDEREÇO</h3>
+
+                <p>O endereço no qual o pedido será entregue é: <br></p>
+                <p>{{enderecos.pais}}, {{enderecos.cidade}}, {{enderecos.bairro}}, {{enderecos.complemento}}</p>
+
+                <button class="botao primario" type="submit">
+                    Confirmar Endereço
+                </button>
+                <label for="endereco"> Trocar endereço: </label>
+                <select id="endereco" name="troca">
+                {%for endereco in enderecos %}
+                    <option>{{enderecos.pais}}, {{enderecos.cidade}}, {{enderecos.bairro}}, {{enderecos.complemento}}</option>
+                {%endfor%}
+                </select>
+              
+
+                <button class="botao primario" id="cancelar_pedido">Cancelar Confirmação</button>
+            </div>
         </form>
-
     </div>
 
 </div>

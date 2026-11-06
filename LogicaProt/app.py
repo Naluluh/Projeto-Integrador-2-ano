@@ -1,10 +1,12 @@
-"""Application Factory do Restaurante Online."""
+"""Application Factory do Sabor e Clic."""
 
 from flask import Flask, redirect, render_template, request, session, url_for
 
 from config import Config
 from database import init_app as init_database
 from utils import formatar_moeda
+
+
 
 
 def create_app(test_config=None):
@@ -20,20 +22,24 @@ def create_app(test_config=None):
 
     # Importa os Blueprints responsáveis pelas diferentes partes do sistema.
     from controllers.auth_controller import auth_bp
-    from controllers.funcionario_controller import funcionario_bp
+    from controllers.usuario_controller import usuario_bp
     from controllers.ingrediente_controller import ingrediente_bp
     from controllers.main_controller import main_bp
     from controllers.pedido_controller import pedido_bp
     from controllers.prato_controller import prato_bp
-
+    from controllers.endereco_controller import endereco_bp
+    from controllers.categorias_controller import categorias_bp
+    
     # Registra os Blueprints na aplicação.
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
-    app.register_blueprint(funcionario_bp)
+    app.register_blueprint(usuario_bp)
     app.register_blueprint(prato_bp)
     app.register_blueprint(ingrediente_bp)
     app.register_blueprint(pedido_bp)
-
+    app.register_blueprint(endereco_bp)
+    app.register_blueprint(categorias_bp)
+    
     # Cria o filtro Jinja |moeda para exibir valores em reais.
     app.jinja_env.filters["moeda"] = formatar_moeda
 
@@ -51,7 +57,7 @@ def create_app(test_config=None):
         # o usuário é redirecionado para o login.
         if (
             request.endpoint not in rotas_publicas
-            and "funcionario_id" not in session
+            and "usuario_id" not in session
         ):
             return redirect(
                 url_for(

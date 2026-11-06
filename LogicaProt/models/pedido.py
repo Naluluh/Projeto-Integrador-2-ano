@@ -2,7 +2,6 @@
 
 from database import get_db
 
-
 def listar():
     # Lista todos os pedidos.
     # Também obtém o nome do funcionário responsável.
@@ -10,10 +9,10 @@ def listar():
         """
         SELECT
             p.*,
-            f.nome AS funcionario_nome
+            f.nome AS usuario_nome
         FROM pedidos p
-        JOIN funcionarios f
-            ON f.id = p.funcionario_id
+        JOIN usuarios f
+            ON f.id = p.usuario_id
         ORDER BY p.criado_em DESC, p.id DESC
         """
     ).fetchall()
@@ -25,18 +24,25 @@ def buscar(pedido_id):
         """
         SELECT
             p.*,
-            f.nome AS funcionario_nome
+            f.nome AS usuario_nome
         FROM pedidos p
-        JOIN funcionarios f
-            ON f.id = p.funcionario_id
+        JOIN usuarios f
+            ON f.id = p.usuario_id
         WHERE p.id = ?
         """,
         (pedido_id,)
     ).fetchone()
 
+def inserir_endereco(pedido_id, endereco_id):
+    #insere um endereço
+    return get_db().execute('''
+    UPDATE pedidos
+    SET endereco_id = ?
+    WHERE ID = ?
+    ''', (pedido_id, endereco_id,)).commit()
 
 def listar_itens(pedido_id):
-    # Lista todos os pratos pertencentes ao pedido.
+    # Lista todos os produtos pertencentes ao pedido.
     return get_db().execute(
         """
         SELECT *
@@ -66,7 +72,7 @@ def atualizar_status(pedido_id, status):
     db.commit()
 
 
-def finalizar(funcionario_id, carrinho):
+def finalizar(usuario_id, carrinho):
     """Grava o pedido e atualiza os ingredientes em uma transação."""
 
     # Obtém a conexão.
@@ -75,17 +81,17 @@ def finalizar(funcionario_id, carrinho):
     try:
         itens = []
 
-        # Verifica todos os pratos do carrinho.
+        # Verifica todos os produtos do carrinho.
         for item in carrinho:
 
-            prato = db.execute(
-                "SELECT * FROM pratos WHERE id = ?",
-                (item["prato_id"],)
+            produto = db.execute(
+                "SELECT * FROM produtos WHERE id = ?",
+                (item["produto_id"],)
             ).fetchone()
 
-            if prato is None:
+            if produto is None:
                 raise ValueError(
-                    f"O prato {item['nome']} não existe mais."
+                    f"O produto {item['nome']} não existe mais."
                 )
 
             # Busca os ingredientes necessários.
@@ -96,12 +102,12 @@ def finalizar(funcionario_id, carrinho):
                     pi.quantidade,
                     i.nome,
                     i.estoque
-                FROM prato_ingredientes pi
+                FROM produto_ingredientes pi
                 JOIN ingredientes i
                     ON i.id = pi.ingrediente_id
-                WHERE pi.prato_id = ?
+                WHERE pi.produto_id = ?
                 """,
-                (item["prato_id"],)
+                (item["produto_id"],)
             ).fetchall()
 
             # Verifica se há ingredientes suficientes.
@@ -117,31 +123,31 @@ def finalizar(funcionario_id, carrinho):
                         f"{ingrediente['nome']}."
                     )
 
-            itens.append((prato, item["quantidade"], ingredientes))
+            itens.append((produto, item["quantidade"], ingredientes))
 
         # Calcula o total do pedido.
         total = sum(
-            prato["preco_centavos"] * quantidade
-            for prato, quantidade, _ in itens
+            produto["preco_centavos"] * quantidade
+            for produto, quantidade, _ in itens
         )
 
         # Cria o pedido inicialmente aguardando preparo.
         cursor = db.execute(
             """
             INSERT INTO pedidos
-                (funcionario_id, status, total_centavos)
+                (usuario_id, status, total_centavos)
             VALUES (?, ?, ?)
             """,
-            (funcionario_id, "espera", total)
+            (usuario_id, "espera", total)
         )
 
         pedido_id = cursor.lastrowid
 
         # Insere cada item do pedido.
-        for prato, quantidade, ingredientes in itens:
+        for produto, quantidade, ingredientes in itens:
 
             subtotal = (
-                prato["preco_centavos"]
+                produto["preco_centavos"]
                 * quantidade
             )
 
@@ -150,8 +156,8 @@ def finalizar(funcionario_id, carrinho):
                 INSERT INTO itens_pedido
                     (
                         pedido_id,
-                        prato_id,
-                        prato_nome,
+                        produto_id,
+                        produto_nome,
                         preco_unitario_centavos,
                         quantidade,
                         subtotal_centavos
@@ -160,9 +166,9 @@ def finalizar(funcionario_id, carrinho):
                 """,
                 (
                     pedido_id,
-                    prato["id"],
-                    prato["nome"],
-                    prato["preco_centavos"],
+                    produto["id"],
+                    produto["nome"],
+                    produto["preco_centavos"],
                     quantidade,
                     subtotal
                 )

@@ -11,6 +11,9 @@ from flask import (
 )
 
 from models import ingrediente as ingrediente_model
+from utils import administrador_required
+from utils import cozinheiro_required
+from utils import cliente_required
 
 
 # Blueprint dos ingredientes.
@@ -84,6 +87,7 @@ def listar():
     "/novo",
     methods=("GET", "POST")
 )
+
 def novo():
 
     if request.method == "POST":

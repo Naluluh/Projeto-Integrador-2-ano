@@ -14,7 +14,7 @@
 
     <!-- Permite que cada página defina seu próprio título. -->
     <title>
-        {% block titulo %}Restaurante Online{% endblock %}
+        {% block titulo %}Sabor & Clic{% endblock %}
     </title>
 
     <!-- Carrega o CSS da aplicação. -->
@@ -29,52 +29,119 @@
 
 <header class="topo">
 
-    <!-- Se estiver logado, vai para o painel.
-         Caso contrário, vai para o login. -->
+    <!--
+        Se estiver logado, vai para o início.
+        Caso contrário, vai para o login.
+    -->
     <a
         class="marca"
         href="{{
             url_for('main.inicio')
-            if session.get('funcionario_id')
+            if session.get('usuario_id')
             else url_for('auth.login')
         }}"
     >
-        Restaurante Fácil
+        Sabor & Clic
     </a>
 
-    {% if session.get('funcionario_id') %}
 
-    <!-- Menu disponível para funcionários autenticados. -->
+    {% if session.get('usuario_id') %}
+
+    <!-- ====================================================
+         MENU DO USUÁRIO LOGADO
+         ==================================================== -->
+
     <nav aria-label="Navegação principal">
 
+        <!-- Página inicial -->
         <a href="{{ url_for('main.inicio') }}">
             Início
         </a>
 
+        {%if session.cargo != 'cliente'%}
+        <!-- Pratos -->
         <a href="{{ url_for('prato.listar') }}">
             Pratos
         </a>
+        {%endif%}
 
-        <a href="{{ url_for('ingrediente.listar') }}">
-            Ingredientes
-        </a>
-
+        <!-- Novo pedido -->
         <a href="{{ url_for('pedido.novo') }}">
             Novo pedido
         </a>
 
+        <a href="{{ url_for('categorias.main') }}">
+            Categorias
+        </a>
+
+
+        <!-- Pedidos -->
         <a href="{{ url_for('pedido.listar') }}">
             Pedidos
         </a>
 
-        <!-- Logout utiliza POST para alterar o estado da sessão. -->
+        <a href="{{ url_for('prato.categorias') }}">
+            Cardápio
+        </a>
+
+
+        <!--
+            A área de usuários aparece somente
+            para administradores.
+        -->
+        {% if session.get('cargo') == 'administrador' %}
+
+            <a href="{{ url_for('usuario.listar') }}">
+                Usuários
+            </a>
+
+            <!-- Ingredientes -->
+        <a href="{{ url_for('ingrediente.listar') }}">
+            Ingredientes
+        </a>
+
+        {% endif %}
+
+        {% if session.get('cargo') == 'cliente' %}
+
+            <a href="{{ url_for('endereco.editar') }}">
+                Endereço
+            </a>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             INFORMAÇÕES DO USUÁRIO
+             ================================================= -->
+
+        <span class="usuario-logado">
+
+            {{ session.get('usuario_nome') }}
+
+            <small>
+                ({{ session.get('cargo') }})
+            </small>
+
+        </span>
+
+
+        <!--
+            Logout utiliza POST para alterar
+            o estado da sessão.
+        -->
         <form
             method="post"
             action="{{ url_for('auth.logout') }}"
         >
-            <button class="link-button">
+
+            <button
+                type="submit"
+                class="link-button"
+            >
                 Sair
             </button>
+
         </form>
 
     </nav>
@@ -83,9 +150,12 @@
 
 </header>
 
+
 <main class="container">
 
-    <!-- Recupera mensagens enviadas pelos Controllers. -->
+    <!--
+        Recupera mensagens enviadas pelos Controllers.
+    -->
     {% with mensagens = get_flashed_messages(
         with_categories=true
     ) %}
@@ -103,14 +173,22 @@
 
     {% endwith %}
 
+
     <!-- Conteúdo específico de cada página. -->
     {% block conteudo %}{% endblock %}
 
 </main>
 
+
 <footer>
-    Projeto didático · Flask, Jinja2, SQLite e MVC
+
+    Projeto integrador ·
+    Disciplinas técnicas ·
+    2° ano
+
 </footer>
 
 </body>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
 </html>

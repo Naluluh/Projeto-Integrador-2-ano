@@ -1,0 +1,66 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+{{ prato.nome }} | Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="detalhes-prato">
+
+    <a href="{{ url_for(
+        'prato.catalogo_categoria',
+        categoria=prato.categoria
+    ) }}">
+        ← Voltar ao cardápio
+    </a>
+
+    <h1>{{ prato.nome }}</h1>
+
+    <img
+        src="{{ prato.imagem }}"
+        alt="{{ prato.nome }}"
+        style="width: 100%; max-width: 500px;"
+    >
+
+    <h2>Sobre o prato</h2>
+
+    <p>{{ prato.descricao }}</p>
+
+    <h2>Ingredientes</h2>
+
+    <ul>
+        {% for ingrediente in prato.ingredientes %}
+            <li>{{ ingrediente }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Preço</h2>
+
+    <p>
+        R$ {{ "%.2f"|format(
+            prato.preco_centavos / 100
+        ) }}
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('pedido.adicionar') }}"
+    >
+
+        <input
+            type="hidden"
+            name="prato_id"
+            value="{{ prato.id }}"
+        >
+
+        <button type="submit">
+            Adicionar ao carrinho
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

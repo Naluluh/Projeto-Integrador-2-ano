@@ -17,7 +17,10 @@ from werkzeug.security import (
     generate_password_hash
 )
 
-from models import funcionario as funcionario_model
+from models import usuario as usuario_model
+from utils import administrador_required
+from utils import cozinheiro_required
+from utils import cliente_required
 
 
 # Cria o Blueprint responsável pela autenticação.
@@ -43,16 +46,16 @@ def login():
         )
 
         # Procura o funcionário no banco.
-        funcionario = funcionario_model.buscar_por_usuario(
+        usuario = usuario_model.buscar_por_usuario(
             nome_usuario
         )
 
         # Verifica se o funcionário existe
         # e se a senha está correta.
         if (
-            funcionario
+            usuario
             and check_password_hash(
-                funcionario["senha_hash"],
+                usuario["senha_hash"],
                 senha
             )
         ):
@@ -61,13 +64,13 @@ def login():
             session.clear()
 
             # Guarda o ID do funcionário.
-            session["funcionario_id"] = funcionario["id"]
+            session["usuario_id"] = usuario["id"]
 
             # Guarda o nome para exibição.
-            session["funcionario_nome"] = funcionario["nome"]
+            session["usuario_nome"] = usuario["nome"]
 
             # Guarda o cargo para controle de permissões.
-            session["cargo"] = funcionario["cargo"]
+            session["cargo"] = usuario["cargo"]
 
             # Vai para o painel principal.
             return redirect(
@@ -114,12 +117,19 @@ def cadastro():
             ""
         ).strip()
 
+        # Tipos de usuário permitidos
+        # no cadastro público.
+        cargos_publicos = {
+            "cliente",
+            "cozinheiro"
+        }
+
         # Validação básica dos campos.
         if (
             len(nome) < 2
             or len(nome_usuario) < 3
             or len(senha) < 6
-            or not cargo
+            or cargo not in cargos_publicos
         ):
             flash(
                 "Preencha todos os campos corretamente.",
@@ -130,21 +140,34 @@ def cadastro():
 
             try:
 
-                # Transforma a senha em hash antes de armazená-la.
+                # Transforma a senha em hash
+                # antes de armazená-la.
                 senha_hash = generate_password_hash(
                     senha
                 )
 
                 # Cria o funcionário.
-                funcionario_model.criar(
+                usuario_id = usuario_model.criar(
                     nome,
                     nome_usuario,
                     senha_hash,
                     cargo
                 )
 
+                if cargo == "cliente":
+
+                    session.clear()
+
+                    session["usuario_id"] = usuario_id
+                    session["usuario_nome"] = nome
+                    session["cargo"] = cargo
+
+                    return redirect(
+                        url_for("endereco.cadastrar")
+                    )
+
                 flash(
-                    "Funcionário cadastrado. Agora faça o login.",
+                    "Cadastro realizado. Agora faça o login.",
                     "sucesso"
                 )
 
@@ -161,7 +184,7 @@ def cadastro():
                 )
 
     return render_template(
-        "cadastro_funcionario.html"
+        "cadastro_usuario.html"
     )
 
 

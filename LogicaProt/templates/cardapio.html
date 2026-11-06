@@ -1,0 +1,115 @@
+#cardapio.html
+{% extends "base.html" %}
+
+{% block titulo %}
+Cardápio | Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="catalogo">
+
+    <h1>Nosso cardápio</h1>
+
+    <p>Escolha o tipo de comida que deseja.</p>
+
+    <!-- Seleção da culinária -->
+    
+    <div class="categorias">
+
+    {% for categoria in categorias %}
+    <a href="{{ url_for(
+        'prato.catalogo_categoria',
+        categoria_id=categoria.id
+    ) }}">
+        {{ categoria.nome }}
+    </a>
+{% endfor %}
+
+</div>
+
+
+    <!-- Lista de pratos -->
+    <h2>
+        {% if categoria_atual %}
+            Pratos de {{ categoria_atual|capitalize }}
+        {% else %}
+            Todos os pratos
+        {% endif %}
+    </h2>
+
+    <div class="pratos">
+
+        {% for prato in pratos %}
+
+            <article class="prato">
+
+                <!-- Thumbnail clicável -->
+                <a href="{{ url_for(
+                    'prato.detalhes',
+                    prato_id=prato.id
+                ) }}">
+
+                    <img
+                        src="{{ prato.imagem }}"
+                        alt="{{ prato.nome }}"
+                    >
+
+                </a>
+
+                <div class="prato-conteudo">
+
+                    <h3>{{ prato.nome }}</h3>
+
+                    <p>{{ prato.descricao }}</p>
+
+                    <p class="preco">
+                        R$ {{ "%.2f"|format(
+                            prato.preco_centavos / 100
+                        ) }}
+                    </p>
+
+                    <!-- Ver detalhes -->
+                    <a
+                        class="botao"
+                        href="{{ url_for(
+                            'prato.detalhes',
+                            prato_id=prato.id
+                        ) }}"
+                    >
+                        Ver detalhes
+                    </a>
+
+                    <!-- Adicionar ao carrinho -->
+                    <form
+                        method="POST"
+                        action="{{ url_for('pedido.adicionar') }}"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="prato_id"
+                            value="{{ prato.id }}"
+                        >
+
+                        <button class="botao" type="submit">
+                            Adicionar ao carrinho
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </article>
+
+        {% else %}
+
+            <p>Nenhum prato disponível nesta categoria.</p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

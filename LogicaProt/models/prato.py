@@ -1,109 +1,126 @@
-"""Model de pratos do restaurante."""
-
 from database import get_db
 
-
 def listar(busca=""):
-    # Adiciona % para permitir encontrar o termo
-    # em qualquer parte do nome ou categoria.
+    db = get_db()
     termo = f"%{busca.strip()}%"
 
-    # Busca pratos pelo nome ou categoria.
-    return get_db().execute(
-        """
-        SELECT *
-        FROM pratos
-        WHERE nome LIKE ? OR categoria LIKE ?
-        ORDER BY nome COLLATE NOCASE
-        """,
-        (termo, termo)
-    ).fetchall()
+    return db.execute("""
+        SELECT
+            produtos.*,
+            categorias.nome AS categoria_nome
+        FROM produtos
+        JOIN categorias
+            ON produtos.categoria_id = categorias.id
+        WHERE produtos.nome LIKE ?
+           OR categorias.nome LIKE ?
+        ORDER BY produtos.nome COLLATE NOCASE
+    """, (termo, termo)).fetchall()
 
 
-def buscar(prato_id):
-    # Busca um prato específico pelo ID.
-    return get_db().execute(
-        "SELECT * FROM pratos WHERE id = ?",
-        (prato_id,)
-    ).fetchone()
-
-
-def criar(nome, descricao, categoria, preco_centavos, modo_preparo):
-    # Obtém a conexão com o banco.
+def criar(nome, descricao, categoria_id, preco_centavos, modo_preparo):
     db = get_db()
 
-    # Insere o prato.
-    db.execute(
-        """
-        INSERT INTO pratos
-            (nome, descricao, categoria, preco_centavos, modo_preparo)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
+    db.execute("""
+        INSERT INTO produtos (
             nome,
             descricao,
-            categoria,
+            categoria_id,
             preco_centavos,
             modo_preparo
         )
-    )
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        nome,
+        descricao,
+        categoria_id,
+        preco_centavos,
+        modo_preparo
+    ))
 
-    # Confirma a alteração.
     db.commit()
 
 
 def atualizar(
-    prato_id,
+    produto_id,
     nome,
     descricao,
-    categoria,
+    categoria_id,
     preco_centavos,
     modo_preparo
 ):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Atualiza os dados do prato.
-    db.execute(
-        """
-        UPDATE pratos
+    db.execute("""
+        UPDATE produtos
         SET nome = ?,
             descricao = ?,
-            categoria = ?,
+            categoria_id = ?,
             preco_centavos = ?,
             modo_preparo = ?
         WHERE id = ?
-        """,
-        (
-            nome,
-            descricao,
-            categoria,
-            preco_centavos,
-            modo_preparo,
-            prato_id
-        )
-    )
+    """, (
+        nome,
+        descricao,
+        categoria_id,
+        preco_centavos,
+        modo_preparo,
+        produto_id
+    ))
 
-    # Confirma a alteração.
     db.commit()
 
 
-def excluir(prato_id):
-    # Obtém a conexão com o banco.
+def listar_por_categoria(categoria_id):
     db = get_db()
 
-    # Exclui o prato pelo ID.
-    db.execute(
-        "DELETE FROM pratos WHERE id = ?",
-        (prato_id,)
-    )
+    return db.execute("""
+        SELECT
+            produtos.*,
+            categorias.nome AS categoria_nome
+        FROM produtos
+        JOIN categorias
+            ON produtos.categoria_id = categorias.id
+        WHERE produtos.categoria_id = ?
+        ORDER BY produtos.nome
+    """, (categoria_id,)).fetchall()
 
-    # Confirma a exclusão.
+
+def listar_categorias():
+    db = get_db()
+
+    return db.execute("""
+        SELECT id, nome
+        FROM categorias
+        ORDER BY nome
+    """).fetchall()
+
+def criar_categoria(nome):
+    db = get_db()
+    nome = nome.strip()
+
+    if not nome:
+        raise ValueError("Informe o nome da categoria.")
+
+    db.execute("""
+        INSERT INTO categorias (nome)
+        VALUES (?)
+        ON CONFLICT(nome) DO NOTHING
+    """, (nome,))
+
     db.commit()
 
+    categoria = db.execute("""
+        SELECT id
+        FROM categorias
+        WHERE nome = ?
+    """, (nome,)).fetchone()
 
-def quantidade_total():
-    # Conta quantos pratos estão cadastrados.
+    return categoria["id"]
+
+def buscar(id_prato):
+    # Procura um prato
+    # COLLATE NOCASE permite ignorar maiúsculas e minúsculas.
     return get_db().execute(
-        "SELECT COUNT(*) AS total FROM pratos"
-    ).fetchone()["total"]
+        "SELECT * FROM usuarios WHERE id = ? COLLATE NOCASE",
+        (id_prato,)
+    ).fetchone()

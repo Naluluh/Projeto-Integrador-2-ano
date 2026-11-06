@@ -19,6 +19,10 @@ from openpyxl.styles import Font
 
 from models import pedido as pedido_model
 from models import prato as prato_model
+from models import endereco_model as endereco_model
+from utils import administrador_required
+from utils import cozinheiro_required
+from utils import cliente_required
 
 
 # Blueprint dos pedidos.
@@ -37,7 +41,6 @@ def _carrinho():
         "carrinho",
         []
     )
-
 
 @pedido_bp.get("")
 def listar():
@@ -64,14 +67,16 @@ def novo():
         for item in carrinho
     )
 
+    endereco = endereco_model.endereco_por_usuario(session["usuario_id"])
+
     # Exibe os pratos e o carrinho.
     return render_template(
         "novo_pedido.html",
         pratos=prato_model.listar(),
         carrinho=carrinho,
-        total=total
+        total=total,
+        enderecos=endereco
     )
-
 
 @pedido_bp.post(
     "/carrinho/adicionar"
@@ -81,9 +86,9 @@ def adicionar():
     try:
 
         # Converte o ID para inteiro.
-        prato_id = int(
+        produto_id = int(
             request.form.get(
-                "prato_id",
+                "produto_id",
                 ""
             )
         )
@@ -98,12 +103,12 @@ def adicionar():
 
     except ValueError:
 
-        prato_id = 0
+        produto_id = 0
         quantidade = 0
 
     # Busca o prato.
     prato = prato_model.buscar(
-        prato_id
+        produto_id
     )
 
     # Verifica os dados.
@@ -126,7 +131,7 @@ def adicionar():
         (
             item
             for item in carrinho
-            if item["prato_id"] == prato_id
+            if item["produto_id"] == produto_id
         ),
         None
     )
@@ -151,7 +156,7 @@ def adicionar():
     else:
 
         carrinho.append({
-            "prato_id": prato["id"],
+            "produto_id": prato["id"],
             "nome": prato["nome"],
             "preco_centavos": prato["preco_centavos"],
             "quantidade": quantidade
@@ -239,7 +244,7 @@ def finalizar():
 
         # Cria o pedido no banco.
         pedido_id = pedido_model.finalizar(
-            session["funcionario_id"],
+            session["usuario_id"],
             carrinho
         )
 
@@ -302,13 +307,16 @@ def detalhes(pedido_id):
 @pedido_bp.post(
     "/<int:pedido_id>/status"
 )
+
 def alterar_status(pedido_id):
 
     # Estados permitidos.
     status_permitidos = {
         "espera",
         "preparado",
-        "entregue"
+        "atrasado",
+        "entregue",
+        "cancelado"
     }
 
     # Obtém o novo status.
@@ -372,7 +380,7 @@ def exportar():
     ws.append([
         "Código",
         "Data e hora",
-        "Funcionário",
+        "Usuário",
         "Status",
         "Total (R$)"
     ])
@@ -389,7 +397,7 @@ def exportar():
         ws.append([
             p["id"],
             p["criado_em"],
-            p["funcionario_nome"],
+            p["usuario_nome"],
             p["status"],
             p["total_centavos"] / 100
         ])

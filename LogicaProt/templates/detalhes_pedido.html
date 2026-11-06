@@ -17,7 +17,7 @@ Pedido #{{ pedido.id }}
         <p>
             {{ pedido.criado_em }}
             ·
-            {{ pedido.funcionario_nome }}
+            {{ pedido.usuario_nome }}
         </p>
 
         <p>
@@ -64,6 +64,20 @@ Pedido #{{ pedido.id }}
                 Entregue
             </option>
 
+             <option
+                value="atrasado"
+                {{ 'selected' if pedido.status == 'atrasado' }}
+            >
+                Atrasado
+            </option>
+
+             <option
+                value="cancelado"
+                {{ 'selected' if pedido.status == 'cancelado' }}
+            >
+                Cancelado
+            </option>
+
         </select>
 
         <button class="botao secundario">
@@ -88,7 +102,7 @@ Pedido #{{ pedido.id }}
     <div class="comprovante-topo">
 
         <h2>
-            Restaurante Fácil
+            Sabor & Clic
         </h2>
 
         <p>
@@ -98,13 +112,18 @@ Pedido #{{ pedido.id }}
         <p>
             {{ pedido.criado_em }}
             ·
-            Funcionário:
-            {{ pedido.funcionario_nome }}
+            Usuário:
+            {{ pedido.usuario_nome }}
         </p>
 
         <p>
             Status:
             {{ pedido.status }}
+        </p>
+
+        <p>
+            Última atualização:
+            {{ pedido.atualizado_em }}
         </p>
 
     </div>
@@ -132,7 +151,7 @@ Pedido #{{ pedido.id }}
                 <tr>
 
                     <td>
-                        {{ i.prato_nome }}
+                        {{ i.produto_nome }}
                     </td>
 
                     <td>
