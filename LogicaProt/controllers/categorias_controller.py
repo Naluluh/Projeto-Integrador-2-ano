@@ -38,7 +38,7 @@ def criar_categoria_api():
 # Página principal de listagem de categorias
 @categorias_bp.get('/')
 def main():
-    return render_template('menu_categoricos.html', categorias=pegar_categorias())
+    return render_template('menu_categorias.html', categorias=pegar_categorias())
 
 
 # Exibe os chefs vinculados a uma categoria específica

@@ -67,7 +67,11 @@ def novo():
         for item in carrinho
     )
 
-    endereco = endereco_model.endereco_por_usuario(session["usuario_id"])
+    enderecos = endereco_model.endereco_por_usuario(
+    session["usuario_id"]
+)
+
+    endereco_atual = enderecos[0] if enderecos else None
 
     # Exibe os pratos e o carrinho.
     return render_template(
@@ -75,7 +79,8 @@ def novo():
         pratos=prato_model.listar(),
         carrinho=carrinho,
         total=total,
-        enderecos=endereco
+        enderecos=enderecos,
+        endereco_atual=endereco_atual
     )
 
 @pedido_bp.post(

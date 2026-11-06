@@ -63,7 +63,7 @@ def catalogo_categoria(categoria_id):
 @prato_bp.route("/detalhes/<int:prato_id>")
 def detalhes(prato_id):
 
-    prato = prato_model.buscar_por_id(prato_id)
+    prato = prato_model.buscar(prato_id)
 
     if prato is None:
         abort(404)

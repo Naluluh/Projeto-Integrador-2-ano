@@ -117,10 +117,16 @@ def criar_categoria(nome):
 
     return categoria["id"]
 
+
 def buscar(id_prato):
-    # Procura um prato
-    # COLLATE NOCASE permite ignorar maiúsculas e minúsculas.
-    return get_db().execute(
-        "SELECT * FROM usuarios WHERE id = ? COLLATE NOCASE",
-        (id_prato,)
-    ).fetchone()
+    """Busca um produto pelo seu ID."""
+
+    return get_db().execute("""
+        SELECT
+            produtos.*,
+            categorias.nome AS categoria_nome
+        FROM produtos
+        JOIN categorias
+            ON produtos.categoria_id = categorias.id
+        WHERE produtos.id = ?
+    """, (id_prato,)).fetchone()

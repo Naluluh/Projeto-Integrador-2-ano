@@ -18,6 +18,7 @@ def endereco_por_usuario(usuario_id):
 
 
 def atualizar(
+    endereco_id,
     usuario_id,
     cep,
     logradouro,
@@ -31,8 +32,7 @@ def atualizar(
 
     db = get_db()
 
-    db.execute(
-        """
+    db.execute("""
         UPDATE enderecos
         SET
             cep = ?,
@@ -43,20 +43,19 @@ def atualizar(
             cidade = ?,
             estado = ?,
             pais = ?
-        WHERE usuario_id = ?
-        """,
-        (
-            cep,
-            logradouro,
-            numero,
-            complemento,
-            bairro,
-            cidade,
-            estado,
-            pais,
-            usuario_id
-        )
-    )
+        WHERE id = ? AND usuario_id = ?
+    """, (
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
+        pais,
+        endereco_id,
+        usuario_id
+    ))
 
     db.commit()
 
