@@ -20,7 +20,7 @@
     <!-- Carrega o CSS da aplicação. -->
     <link
         rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
+        href="{{ url_for('static', filename='style1.css') }}"
     >
 
 </head>
@@ -70,10 +70,18 @@
             Novo pedido
         </a>
 
+        <a href="{{ url_for('categorias.main') }}">
+            Categorias
+        </a>
+
 
         <!-- Pedidos -->
         <a href="{{ url_for('pedido.listar') }}">
             Pedidos
+        </a>
+
+        <a href="{{ url_for('prato.categorias') }}">
+            Cardápio
         </a>
 
 
@@ -181,5 +189,6 @@
 </footer>
 
 </body>
-<script src="{{ url_for('static', filename='script.js')}}"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
 </html>

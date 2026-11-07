@@ -17,7 +17,7 @@ from werkzeug.security import (
     generate_password_hash
 )
 
-from models import usuario as usuario_model
+from models import usuario_model as usuario_model
 from utils import administrador_required
 from utils import cozinheiro_required
 from utils import cliente_required
@@ -185,6 +185,108 @@ def cadastro():
 
     return render_template(
         "cadastro_usuario.html"
+    )
+
+@auth_bp.route(
+    "/adm/cadastro",
+    methods=("GET", "POST")
+)
+@administrador_required
+def cadastro_adm():
+
+    # Verifica se o formulário foi enviado.
+    if request.method == "POST":
+
+        # Obtém os dados enviados.
+        nome = request.form.get(
+            "nome",
+            ""
+        ).strip()
+
+        nome_usuario = request.form.get(
+            "usuario",
+            ""
+        ).strip()
+
+        senha = request.form.get(
+            "senha",
+            ""
+        )
+
+        cargo = request.form.get(
+            "cargo",
+            ""
+        ).strip()
+
+        # Tipos de usuário permitidos
+        # no cadastro público.
+        cargos_publicos = {
+            "cliente",
+            "cozinheiro",
+            "administrador"
+        }
+
+        # Validação básica dos campos.
+        if (
+            len(nome) < 2
+            or len(nome_usuario) < 3
+            or len(senha) < 6
+            or cargo not in cargos_publicos
+        ):
+            flash(
+                "Preencha todos os campos corretamente.",
+                "erro"
+            )
+
+        else:
+
+            try:
+
+                # Transforma a senha em hash
+                # antes de armazená-la.
+                senha_hash = generate_password_hash(
+                    senha
+                )
+
+                # Cria o funcionário.
+                usuario_id = usuario_model.criar(
+                    nome,
+                    nome_usuario,
+                    senha_hash,
+                    cargo
+                )
+
+                if cargo == "cliente":
+
+                    session.clear()
+
+                    session["usuario_id"] = usuario_id
+                    session["usuario_nome"] = nome
+                    session["cargo"] = cargo
+
+                    return redirect(
+                        url_for("endereco.cadastrar")
+                    )
+
+                flash(
+                    "Novo usuário cadastrado.",
+                    "sucesso"
+                )
+
+                return redirect(
+                    url_for("main.inicio")
+                )
+
+            except sqlite3.IntegrityError:
+
+                # O usuário possui uma restrição UNIQUE.
+                flash(
+                    "Esse nome de usuário já está em uso.",
+                    "erro"
+                )
+
+    return render_template(
+        "adm_cadastro_usuario.html"
     )
 
 

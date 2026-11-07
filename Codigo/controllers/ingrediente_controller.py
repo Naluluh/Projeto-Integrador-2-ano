@@ -10,7 +10,7 @@ from flask import (
     url_for
 )
 
-from models import ingrediente as ingrediente_model
+from models import ingrediente_model as ingrediente_model
 from utils import administrador_required
 from utils import cozinheiro_required
 from utils import cliente_required
@@ -23,7 +23,7 @@ ingrediente_bp = Blueprint(
     url_prefix="/ingredientes"
 )
 
-
+@administrador_required
 def _dados_formulario():
 
     # Obtém o nome.
@@ -61,7 +61,7 @@ def _dados_formulario():
 
     return nome, unidade, estoque
 
-@administrador_required
+
 @ingrediente_bp.get("")
 def listar():
 
@@ -82,11 +82,11 @@ def listar():
         busca=busca
     )
 
-
 @ingrediente_bp.route(
     "/novo",
     methods=("GET", "POST")
 )
+
 @administrador_required
 def novo():
 
@@ -123,11 +123,13 @@ def novo():
         ingrediente=None
     )
 
-@administrador_required
+
 @ingrediente_bp.route(
     "/<int:ingrediente_id>/editar",
     methods=("GET", "POST")
 )
+
+@administrador_required
 def editar(ingrediente_id):
 
     # Busca o ingrediente.
@@ -170,10 +172,12 @@ def editar(ingrediente_id):
         ingrediente=ingrediente
     )
 
-@administrador_required
+
 @ingrediente_bp.post(
     "/<int:ingrediente_id>/excluir"
 )
+
+@administrador_required
 def excluir(ingrediente_id):
 
     # Verifica se o ingrediente existe.

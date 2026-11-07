@@ -17,12 +17,12 @@ from flask import (
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from models import pedido as pedido_model
-from models import prato as prato_model
-from models import endereco as endereco_model
+from models import pedido_model as pedido_model
+from models import prato_model as prato_model
+from models import endereco_model as endereco_model
 from utils import administrador_required
+from utils import adm_cli_required
 from utils import cozinheiro_required
-from utils import cliente_required
 
 
 # Blueprint dos pedidos.
@@ -42,8 +42,10 @@ def _carrinho():
         []
     )
 
-@administrador_required or cliente_required
+
+
 @pedido_bp.get("")
+@administrador_required
 def listar():
 
     # Lista os pedidos registrados.
@@ -56,6 +58,7 @@ def listar():
 
 
 @pedido_bp.get("/novo")
+@adm_cli_required
 def novo():
 
     # Obtém o carrinho.
@@ -68,18 +71,26 @@ def novo():
         for item in carrinho
     )
 
+    enderecos = endereco_model.endereco_por_usuario(
+    session["usuario_id"]
+)
+
+    endereco_atual = enderecos[0] if enderecos else None
+
     # Exibe os pratos e o carrinho.
     return render_template(
         "novo_pedido.html",
         pratos=prato_model.listar(),
         carrinho=carrinho,
         total=total,
-        enderecos=endereco_model.endereco_por_usuario(session["usuario_id"])
+        enderecos=enderecos,
+        endereco_atual=endereco_atual
     )
 
 @pedido_bp.post(
     "/carrinho/adicionar"
 )
+@adm_cli_required
 def adicionar():
 
     try:
@@ -177,6 +188,7 @@ def adicionar():
 @pedido_bp.post(
     "/carrinho/<int:indice>/remover"
 )
+@adm_cli_required
 def remover(indice):
 
     # Obtém o carrinho.
@@ -203,6 +215,7 @@ def remover(indice):
 @pedido_bp.post(
     "/carrinho/limpar"
 )
+@adm_cli_required
 def limpar():
 
     # Remove o carrinho.
@@ -222,6 +235,7 @@ def limpar():
 
 
 @pedido_bp.post("/finalizar")
+@adm_cli_required
 def finalizar():
 
     # Obtém o carrinho.
@@ -277,10 +291,11 @@ def finalizar():
         )
     )
 
-@cozinheiro_required
+
 @pedido_bp.get(
     "/<int:pedido_id>"
 )
+@administrador_required
 def detalhes(pedido_id):
 
     # Busca o pedido.
@@ -363,8 +378,9 @@ def alterar_status(pedido_id):
         )
     )
 
-@administrador_required
+
 @pedido_bp.get("/exportar")
+@administrador_required
 def exportar():
 
     # Cria uma planilha.

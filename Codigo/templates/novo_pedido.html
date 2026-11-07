@@ -25,19 +25,12 @@ Novo pedido
 
 <section class="painel">
 
-    <form
-        method="post"
-        action="{{ url_for('pedido.adicionar') }}"
-        class="adicionar-item"
-    >
+    <form method="post" action="{{ url_for('pedido.adicionar') }}" class="adicionar-item">
 
         <label>
             Prato
 
-            <select
-                name="produto_id"
-                required
-            >
+            <select name="produto_id" required>
 
                 <option value="">
                     Selecione...
@@ -63,20 +56,12 @@ Novo pedido
         <label>
             Quantidade
 
-            <input
-                type="number"
-                name="quantidade"
-                min="1"
-                value="1"
-                required
-            >
+            <input type="number" name="quantidade" min="1" value="1" required>
 
         </label>
 
 
-        <button
-            class="botao primario"
-        >
+        <button class="botao primario">
             Adicionar
         </button>
 
@@ -121,28 +106,23 @@ Novo pedido
 
                 <td>
                     {{
-                        (
-                            item.preco_centavos
-                            * item.quantidade
-                        )|moeda
+                    (
+                    item.preco_centavos
+                    * item.quantidade
+                    )|moeda
                     }}
                 </td>
 
                 <td>
 
-                    <form
-                        method="post"
-                        action="{{
+                    <form method="post" action="{{
                             url_for(
                                 'pedido.remover',
                                 indice=loop.index0
                             )
-                        }}"
-                    >
+                        }}">
 
-                        <button
-                            class="perigo link-button"
-                        >
+                        <button class="perigo link-button">
                             Remover
                         </button>
 
@@ -156,10 +136,7 @@ Novo pedido
 
             <tr>
 
-                <td
-                    colspan="5"
-                    class="vazio"
-                >
+                <td colspan="5" class="vazio">
                     O pedido está vazio.
                 </td>
 
@@ -187,53 +164,61 @@ Novo pedido
 
     <div class="acoes-finais">
 
-        <form
-            method="post"
-            action="{{ url_for('pedido.limpar') }}"
-        >
+        <form method="post" action="{{ url_for('pedido.limpar') }}">
 
-            <button
-                class="botao secundario"
-                {{ 'disabled' if not carrinho }}
-            >
+            <button class="botao secundario" {{ 'disabled' if not carrinho }}>
                 Limpar
             </button>
 
         </form>
 
-         <button
-                class="botao primario"
-                {{ 'disabled' if not carrinho }} 
-                id="registrar_pedido"
-                type="button"
-        >
+        <button class="botao primario" {{ 'disabled' if not carrinho }} id="registrar_pedido" type="button">
             Registrar pedido
         </button>
+
 
         <form method="post" action="{{ url_for('pedido.finalizar') }}">
 
             <div id="confirmacao_pedido" class="painel">
+
                 <h3>CONFIRMAR ENDEREÇO</h3>
 
-                <p>O endereço no qual o pedido será entregue é: <br></p>
-                <p>{{enderecos.pais}}, {{enderecos.cidade}}, {{enderecos.bairro}}, {{enderecos.complemento}}</p>
+                <p>O endereço no qual o pedido será entregue é:</p>
+
+                {% if endereco_atual %}
+
+                <p>
+                    {{ endereco_atual.logradouro }},
+                    {{ endereco_atual.numero }} -
+                    {{ endereco_atual.bairro }},
+                    {{ endereco_atual.cidade }} -
+                    {{ endereco_atual.estado }}
+                </p>
+
+                {% else %}
+
+                <p>Nenhum endereço cadastrado.</p>
+                <a href="{{ url_for('endereco.cadastrar') }}">
+                    Cadastrar endereço
+                </a>
+
+                {% endif %}
+
+                <a href="{{ url_for('endereco.editar') }}" class="botao secundario" id="trocar_endereco">
+                    Editar Endereço
+                </a>
 
                 <button class="botao primario" type="submit">
                     Confirmar Endereço
                 </button>
-                <label for="endereco"> Trocar endereço: </label>
-                <select id="endereco" name="troca">
-                {%for endereco in enderecos %}
-                    <option>{{enderecos.pais}}, {{enderecos.cidade}}, {{enderecos.bairro}}, {{enderecos.complemento}}</option>
-                {%endfor%}
-                </select>
-              
 
-                <button class="botao primario" id="cancelar_pedido">Cancelar Confirmação</button>
+                <button type="button" id="cancelar_pedido" class="botao secundario">
+                    Cancelar Confirmação
+                </button>
+
             </div>
+
         </form>
     </div>
-
 </div>
-
 {% endblock %}

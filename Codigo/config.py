@@ -19,7 +19,7 @@ class Config:
     # Caminho do banco SQLite do restaurante.
     DATABASE = os.environ.get(
         "DATABASE",
-        str(BASE_DIR / "instance" / "restaurantev1.db")
+        str(BASE_DIR / "instance" / "restaurantev2.db")
     )
 
     # Impede que JavaScript acesse diretamente o cookie da sessão.

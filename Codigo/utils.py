@@ -123,7 +123,7 @@ def administrador_required(funcao):
 
 def cozinheiro_required(funcao):
     """
-    Permite o acesso somente a administradores.
+    Permite o acesso somente a cozinheiros.
     """
 
     @wraps(funcao)
@@ -159,7 +159,7 @@ def cozinheiro_required(funcao):
 
 def cliente_required(funcao):
     """
-    Permite o acesso somente a administradores.
+    Permite o acesso somente a clientes.
     """
 
     @wraps(funcao)
@@ -192,3 +192,75 @@ def cliente_required(funcao):
         return funcao(*args, **kwargs)
 
     return verificar_cliente
+
+def gestor_required(funcao):
+    """
+    Permite o acesso a administradores e cozinheiros.
+    """
+
+    @wraps(funcao)
+    def verificar_gestor(*args, **kwargs):
+
+        # Primeiro verifica se existe alguém logado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("auth.login")
+            )
+
+        # Depois verifica o cargo armazenado na sessão.
+        if session.get("cargo") != "administrador" or session.get("cargo") != "cozinheiro":
+
+            flash(
+                "Você não tem permissão para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("main.inicio")
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_gestor
+
+def adm_cli_required(funcao):
+    """
+    Permite o acesso a administradores e cozinheiros.
+    """
+
+    @wraps(funcao)
+    def verificar_end(*args, **kwargs):
+
+        # Primeiro verifica se existe alguém logado.
+        if "usuario_id" not in session:
+
+            flash(
+                "Faça login para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("auth.login")
+            )
+
+        # Depois verifica o cargo armazenado na sessão.
+        if session.get("cargo") != "administrador" or session.get("cargo") != "cliente":
+
+            flash(
+                "Você não tem permissão para acessar esta página.",
+                "erro"
+            )
+
+            return redirect(
+                url_for("main.inicio")
+            )
+
+        return funcao(*args, **kwargs)
+
+    return verificar_end

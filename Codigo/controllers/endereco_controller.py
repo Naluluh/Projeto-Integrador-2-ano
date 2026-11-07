@@ -10,9 +10,8 @@ from flask import (
     url_for
 )
 
-from models import endereco as endereco_model
-from utils import cliente_required
-
+from models import endereco_model as endereco_model
+from utils import adm_cli_required
 
 endereco_bp = Blueprint(
     "endereco",
@@ -25,7 +24,7 @@ endereco_bp = Blueprint(
     "/cadastro",
     methods=("GET", "POST")
 )
-@cliente_required
+@adm_cli_required
 def cadastrar():
 
     if request.method == "POST":
@@ -114,13 +113,13 @@ def cadastrar():
     )
 
 @endereco_bp.route("/editar", methods=("GET", "POST"))
-@cliente_required
+@adm_cli_required
 def editar():
 
     usuario_id = session["usuario_id"]
 
     endereco = endereco_model.endereco_por_usuario(usuario_id)
-
+    endereco_id = endereco_model.end_id(usuario_id)
     if endereco is None:
         flash("Você ainda não possui um endereço cadastrado.", "erro")
         return redirect(url_for("endereco.cadastrar"))
@@ -153,6 +152,7 @@ def editar():
             )
 
         endereco_model.atualizar(
+            endereco_id,
             usuario_id,
             cep,
             logradouro,

@@ -7,6 +7,8 @@ from database import init_app as init_database
 from utils import formatar_moeda
 
 
+
+
 def create_app(test_config=None):
     # Cria a aplicação Flask usando a pasta instance para arquivos específicos da aplicação.
     app = Flask(__name__, instance_relative_config=True)
@@ -26,7 +28,8 @@ def create_app(test_config=None):
     from controllers.pedido_controller import pedido_bp
     from controllers.prato_controller import prato_bp
     from controllers.endereco_controller import endereco_bp
-
+    from controllers.categorias_controller import categorias_bp
+    
     # Registra os Blueprints na aplicação.
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -35,6 +38,7 @@ def create_app(test_config=None):
     app.register_blueprint(ingrediente_bp)
     app.register_blueprint(pedido_bp)
     app.register_blueprint(endereco_bp)
+    app.register_blueprint(categorias_bp)
     
     # Cria o filtro Jinja |moeda para exibir valores em reais.
     app.jinja_env.filters["moeda"] = formatar_moeda

@@ -35,6 +35,8 @@ async function buscarCep() {
         document.getElementById("estado").value =
             dados.uf || "";
 
+        document.getElementById("pais").value = "Brasil";
+
     } catch (erro) {
 
         console.error("Erro ao consultar o CEP:", erro);

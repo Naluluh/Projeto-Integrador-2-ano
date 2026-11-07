@@ -2,9 +2,8 @@
 
 from flask import Blueprint, render_template, session
 
-from models import ingrediente
-from models import pedido
-from models import prato
+from models import ingrediente_model
+from models import pedido_model
 
 
 # Blueprint da página inicial.
@@ -18,9 +17,8 @@ main_bp = Blueprint(
 def inicio():
 
     # Obtém as quantidades para o painel.
-    total_pratos = prato.quantidade_total()
-    total_ingredientes = ingrediente.quantidade_total()
-    total_pedidos = pedido.quantidade_total()
+    total_ingredientes = ingrediente_model.quantidade_total()
+    total_pedidos = pedido_model.quantidade_total()
 
     # Obtém o cargo do usuário que está logado.
     cargo = session.get("cargo")
@@ -29,7 +27,6 @@ def inicio():
     if cargo == "cliente":
         return render_template(
             "menu_cliente.html",
-            total_pratos=total_pratos,
             total_ingredientes=total_ingredientes,
             total_pedidos=total_pedidos
         )
@@ -38,7 +35,6 @@ def inicio():
     elif cargo == "cozinheiro":
         return render_template(
             "menu_cozinheiro.html",
-            total_pratos=total_pratos,
             total_ingredientes=total_ingredientes,
             total_pedidos=total_pedidos
         )
@@ -47,7 +43,6 @@ def inicio():
     elif cargo == "administrador":
         return render_template(
             "menu_adm.html",
-            total_pratos=total_pratos,
             total_ingredientes=total_ingredientes,
             total_pedidos=total_pedidos
         )

@@ -1,4 +1,4 @@
-"""CRUD e exportação de pratos."""
+"""CRUD e exportação de produtos."""
 
 from io import BytesIO
 
@@ -16,20 +16,64 @@ from flask import (
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from models import prato as prato_model
+from models import prato_model as prato_model
+from models import usuario_model as usuario_model
 from utils import moeda_para_centavos
 from utils import administrador_required
-from utils import cozinheiro_required
+from utils import gestor_required
 from utils import cliente_required
 
-# Blueprint responsável pelos pratos.
+
 prato_bp = Blueprint(
     "prato",
     __name__,
-    url_prefix="/pratos"
+    url_prefix="/cardapio"
 )
 
-@cozinheiro_required
+
+# Clientes: página inicial do cardápio
+@prato_bp.route("/")
+def categorias():
+    categorias = prato_model.listar_categorias()
+
+    return render_template(
+        "cardapio.html",
+        categorias=categorias,
+        pratos=[],
+        categoria_atual=None
+    )
+
+
+# Clientes: pratos de uma categoria
+@prato_bp.route("/categoria/<int:categoria_id>")
+def catalogo_categoria(categoria_id):
+    categorias = prato_model.listar_categorias()
+    pratos = prato_model.listar_por_categoria(categoria_id)
+
+    return render_template(
+        "cardapio.html",
+        categorias=categorias,
+        pratos=pratos,
+        categoria_atual=categoria_id
+    )
+
+# Lista produtos da culinária selecionada.
+
+# Exibe os detalhes de um prato.
+@prato_bp.route("/detalhes/<int:prato_id>")
+def detalhes(prato_id):
+
+    prato = prato_model.buscar(prato_id)
+
+    if prato is None:
+        abort(404)
+
+    return render_template(
+        "prato_detalhes.html",
+        prato=prato
+    )
+
+@gestor_required
 def _dados_formulario():
     # Obtém o nome do prato.
     nome = request.form.get(
@@ -44,10 +88,10 @@ def _dados_formulario():
     ).strip()
 
     # Obtém a categoria.
-    categoria = request.form.get(
-        "categoria",
-        ""
-    ).strip()
+    categoria = request.form.get("categoria", "").strip()
+
+    if categoria and categoria != "__nova__":
+        categoria = int(categoria)
 
     # Obtém o modo de preparo.
     modo_preparo = request.form.get(
@@ -81,33 +125,25 @@ def _dados_formulario():
     )
 
 
-@prato_bp.get("")
+@prato_bp.get("/gerenciar")
+
 def listar():
+    busca = request.args.get("busca", "")
 
-    # Obtém o termo digitado na pesquisa.
-    busca = request.args.get(
-        "busca",
-        ""
-    )
+    produtos = prato_model.listar(busca)
 
-    # Busca os pratos no Model.
-    pratos = prato_model.listar(
-        busca
-    )
-
-    # Exibe a página.
     return render_template(
         "pratos.html",
-        pratos=pratos,
+        produtos=produtos,
         busca=busca
     )
-
 
 @prato_bp.route(
     "/novo",
     methods=("GET", "POST")
 )
-@cozinheiro_required
+
+@gestor_required
 def novo():
 
     # Processa o formulário quando enviado.
@@ -115,10 +151,33 @@ def novo():
 
         try:
 
-            # Obtém os dados validados.
-            dados = _dados_formulario()
+            # Obtém os dados do formulário.
+            dados = list(_dados_formulario())
 
-            # Cria o prato.
+            # Obtém a categoria selecionada.
+            categoria = request.form.get(
+                "categoria",
+                ""
+            ).strip()
+
+            # Se escolheu criar uma nova categoria.
+            if categoria == "__nova__":
+                nova_categoria = request.form.get(
+                    "nova_categoria", ""
+                ).strip()
+
+                if not nova_categoria:
+                    raise ValueError("Informe a categoria.")
+
+                categoria_id = prato_model.criar_categoria(
+                    nova_categoria
+                )
+
+                dados[2] = categoria_id
+            else:
+                dados[2] = int(categoria)
+
+            # Salva o prato no banco.
             prato_model.criar(*dados)
 
             flash(
@@ -137,10 +196,16 @@ def novo():
                 "erro"
             )
 
+  # Carrega categorias e cozinheiros do banco de dados
+    categorias = prato_model.listar_categorias()
+    cozinheiros = usuario_model.listar_cozinheiros()
+  
     return render_template(
         "prato_form.html",
-        prato=None
-    )
+        prato=None,
+        categorias=categorias,
+        cozinheiros=cozinheiros
+      )
 
 
 @prato_bp.route(
@@ -148,7 +213,7 @@ def novo():
     methods=("GET", "POST")
 )
 
-@administrador_required or cozinheiro_required
+@gestor_required
 def editar(prato_id):
 
     # Procura o prato.
@@ -221,7 +286,7 @@ def excluir(prato_id):
 
 
 @prato_bp.get("/exportar")
-@administrador_required
+@gestor_required
 def exportar():
 
     # Cria uma planilha Excel.
@@ -231,7 +296,7 @@ def exportar():
     ws = wb.active
 
     # Define seu nome.
-    ws.title = "Pratos"
+    ws.title = "produtos"
 
     # Cria o cabeçalho.
     ws.append([
@@ -249,14 +314,14 @@ def exportar():
             bold=True
         )
 
-    # Adiciona os pratos.
+    # Adiciona os produtos.
     for p in prato_model.listar():
 
         ws.append([
             p["id"],
             p["nome"],
             p["descricao"],
-            p["categoria"],
+            p["categoria_nome"],
             p["preco_centavos"] / 100,
             p["modo_preparo"]
         ])
@@ -284,9 +349,10 @@ def exportar():
     return send_file(
         arquivo,
         as_attachment=True,
-        download_name="pratos.xlsx",
+        download_name="produtos.xlsx",
         mimetype=(
             "application/vnd.openxmlformats-officedocument."
             "spreadsheetml.sheet"
         )
     )
+

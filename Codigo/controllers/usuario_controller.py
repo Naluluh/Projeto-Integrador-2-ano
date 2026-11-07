@@ -13,7 +13,7 @@ from flask import (
 
 from werkzeug.security import generate_password_hash
 
-from models import usuario as usuario_model
+from models import usuario_model as usuario_model
 from utils import administrador_required
 
 
@@ -39,7 +39,7 @@ def listar():
     "/novo",
     methods=("GET", "POST")
 )
-@administrador_required
+
 def novo():
 
     # Se o formulário foi enviado.
@@ -253,6 +253,7 @@ def editar(usuario_id):
 @usuario_bp.post(
     "/<int:usuario_id>/excluir"
 )
+
 @administrador_required
 def excluir(usuario_id):
 
