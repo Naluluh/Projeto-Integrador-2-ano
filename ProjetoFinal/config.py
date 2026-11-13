@@ -12,8 +12,7 @@ class Config:
     # Chave utilizada pelo Flask para proteger os dados da sessão.
     # Em produção, deve ser definida através de uma variável de ambiente.
     SECRET_KEY = os.environ.get(
-        "SECRET_KEY",
-        "troque-esta-chave-em-producao"
+        "bl0ck3d_f0r_th3_0th3rs", "secret_key_67"
     )
 
     # URL PostgreSQL hospedada no Neon.
