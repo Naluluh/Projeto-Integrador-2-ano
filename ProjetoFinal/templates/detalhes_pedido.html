@@ -1,0 +1,177 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+Detalhes do pedido
+{% endblock %}
+
+{% block conteudo %}
+
+<h1>Pedido #{{ pedido.id }}</h1>
+
+<section class="auth-card">
+
+    <h2>Informações do pedido</h2>
+
+    <p>
+        <strong>Cliente:</strong>
+        {{ pedido.usuario_nome }}
+    </p>
+
+    <p>
+        <strong>Cozinheiro:</strong>
+        {{ pedido.chef_nome or "Não informado" }}
+    </p>
+
+    <p>
+        <strong>Data:</strong>
+        {{ pedido.criado_em }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ pedido.status }}
+    </p>
+
+    <p>
+        <strong>Total:</strong>
+        {{ pedido.total_centavos|moeda }}
+    </p>
+
+</section>
+
+
+<section class="auth-card">
+
+    <h2>Produtos do pedido</h2>
+
+    {% if itens %}
+
+        {% for item in itens %}
+
+            <div>
+
+                <h3>{{ item.produto_nome }}</h3>
+
+                <p>
+                    Quantidade:
+                    {{ item.quantidade }}
+                </p>
+
+                <p>
+                    Valor unitário:
+                    {{ item.preco_unitario_centavos|moeda }}
+                </p>
+
+                <p>
+                    Subtotal:
+                    {{ item.subtotal_centavos|moeda }}
+                </p>
+
+            </div>
+
+            <hr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>Nenhum produto encontrado neste pedido.</p>
+
+    {% endif %}
+
+</section>
+
+
+{% if pode_alterar_status %}
+
+    {% if pedido.status not in ["entregue", "cancelado"] %}
+
+        <section class="auth-card">
+
+            <h2>Atualizar status</h2>
+
+            <form
+                method="post"
+                action="{{ url_for(
+                    'pedido.alterar_status',
+                    pedido_id=pedido.id
+                ) }}"
+            >
+
+                <label for="status">Novo status:</label>
+
+                <select name="status" id="status" required>
+
+                    <option value="espera">
+                        Aguardando
+                    </option>
+
+                    <option value="preparado">
+                        Preparado
+                    </option>
+
+                    <option value="atrasado">
+                        Atrasado
+                    </option>
+
+                    <option value="entregue">
+                        Entregue
+                    </option>
+
+                    {% if session.get("cargo") == "administrador" %}
+                        <option value="cancelado">
+                            Cancelado
+                        </option>
+                    {% endif %}
+
+                </select>
+
+                <button type="submit">
+                    Atualizar status
+                </button>
+
+            </form>
+
+        </section>
+
+    {% endif %}
+
+{% endif %}
+
+
+{% if pode_cancelar %}
+
+    <section class="auth-card">
+
+        <h2>Cancelar pedido</h2>
+
+        <p>
+            Você não receberá mais seu prato após o cancelamento.
+        </p>
+
+        <form
+            method="post"
+            action="{{ url_for(
+                'pedido.cancelar',
+                pedido_id=pedido.id
+            ) }}"
+            onsubmit="return confirm('Deseja realmente cancelar este pedido?')"
+        >
+
+            <button type="submit">
+                Cancelar pedido
+            </button>
+
+        </form>
+
+    </section>
+
+{% endif %}
+
+
+<a href="{{ url_for('pedido.listar') }}">
+    Voltar ao histórico
+</a>
+
+{% endblock %}

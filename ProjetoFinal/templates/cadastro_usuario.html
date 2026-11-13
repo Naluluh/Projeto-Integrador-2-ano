@@ -1,0 +1,136 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+Cadastro
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="container">
+
+<section class="auth-card">
+
+    <h1>
+        {% if usuario %}
+            Editar funcionário
+        {% else %}
+            Cadastrar funcionário
+        {% endif %}
+    </h1>
+
+    <form
+        method="post"
+        class="formulario"
+        enctype="multipart/form-data"
+    >
+
+        <label>
+            Nome completo
+
+            <input
+                name="nome"
+                required
+                minlength="2"
+                value="{{ usuario['nome'] if usuario else '' }}"
+            >
+        </label>
+
+        <label>
+            Usuário
+
+            <input
+                name="usuario"
+                required
+                minlength="3"
+                autocomplete="username"
+                value="{{ usuario['usuario'] if usuario else '' }}"
+            >
+        </label>
+
+        <label>
+            Senha
+
+            <input
+                type="password"
+                name="senha"
+                {% if not usuario %}required{% endif %}
+                minlength="6"
+                autocomplete="new-password"
+                placeholder="{% if usuario %}Deixe vazio para manter a senha atual{% endif %}"
+            >
+        </label>
+
+        <label>
+            Cargo
+
+            <select name="cargo" required>
+
+                <option value="">
+                    Selecione...
+                </option>
+
+                <option value="cliente"
+                    {% if usuario and usuario['cargo'] == 'cliente' %}selected{% endif %}>
+                    Cliente
+                </option>
+
+                <option value="cozinheiro"
+                    {% if usuario and usuario['cargo'] == 'cozinheiro' %}selected{% endif %}>
+                    Cozinheiro
+                </option>
+
+                <option value="administrador"
+                    {% if usuario and usuario['cargo'] == 'administrador' %}selected{% endif %}>
+                    Administrador
+                </option>
+
+            </select>
+        </label>
+
+        {% if usuario and usuario['foto_url'] %}
+
+            <p>Foto atual:</p>
+
+            <img
+                src="{{ url_for('static', filename=usuario['foto_url']) }}"
+                alt="Foto atual do usuário"
+                class="foto-perfil"
+            >
+
+        {% endif %}
+
+        <label>
+            Foto de perfil
+
+            <input
+                type="file"
+                name="foto_perfil"
+                accept="image/*"
+            >
+        </label>
+
+        <button
+            class="botao primario"
+            type="submit"
+        >
+            {% if usuario %}
+                Salvar alterações
+            {% else %}
+                Cadastrar usuário
+            {% endif %}
+        </button>
+
+    </form>
+
+    <p>
+        <a href="{{ url_for('usuario.listar') if usuario else url_for('auth.login') }}">
+            Voltar
+        </a>
+    </p>
+
+</section>
+
+</section>
+
+{% endblock %}

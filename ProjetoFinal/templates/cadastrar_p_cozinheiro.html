@@ -1,0 +1,84 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+Perfil do cozinheiro
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>Perfil do cozinheiro</h1>
+
+    <p>Adicione seu currículo para concluir seu cadastro.</p>
+
+    <form method="post" class="formulario" enctype="multipart/form-data">
+
+        <label for="formacao">Formação</label>
+        <input type="text" id="formacao" name="formacao">
+
+        <label for="biografia">Biografia</label>
+        <textarea
+            id="biografia"
+            name="biografia"
+            rows="5"
+            placeholder="Adicionar descrição..."
+            required
+        ></textarea>
+
+        <label for="categoria_select">Categoria:</label>
+
+        <select
+            id="categoria_select"
+            name="categoria"
+            size="5"
+            multiple
+            required
+        >
+            {% for cat in categorias %}
+                <option value="{{ cat.id }}">{{ cat.nome }}</option>
+            {% endfor %}
+        </select>
+
+        <button
+            type="button"
+            onclick="document.getElementById('boxNovaCategoria').style.display = 'block'"
+        >
+            Adicionar Nova Categoria
+        </button>
+
+        <div id="boxNovaCategoria" style="display: none; margin-top: 10px;">
+
+            <label for="foto_categoria">Foto da nova categoria:</label>
+            <input
+                id="foto_categoria"
+                name="foto_categoria"
+                type="file"
+                accept="image/*"
+            >
+
+            <label for="nomeNovaCategoria">Nome da categoria:</label>
+            <input
+                type="text"
+                id="nomeNovaCategoria"
+                name="nova_categoria"
+                placeholder="Nome da nova categoria"
+            >
+
+            <button type="button" onclick="cadastrarCategoriaAsync()">
+                Salvar Categoria
+            </button>
+
+        </div>
+
+        <label for="experiencia">Experiência</label>
+        <input type="text" id="experiencia" name="experiencia">
+
+        <button type="submit">Cadastrar Perfil</button>
+
+    </form>
+
+</section>
+
+{% endblock %}

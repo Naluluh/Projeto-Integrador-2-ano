@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Cardápio | Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="catalogo">
+
+    <h1>Nosso cardápio</h1>
+
+    <p>Escolha o tipo de comida que deseja.</p>
+
+    <!-- Seleção da culinária -->
+
+    <div class="categorias">
+
+        {% for categoria in categorias %}
+        <a href="{{ url_for(
+        'pratos.catalogo_categoria',
+        categoria_id=categoria.id
+    ) }}">
+            {{ categoria.nome }}
+        </a>
+        {% endfor %}
+
+    </div>
+
+    {% if pratos.disponivel %}
+
+    <span class="disponivel">
+        Disponível
+    </span>
+
+    {% else %}
+
+    <span class="indisponivel">
+        Indisponível
+    </span>
+
+    {% endif %}
+    <!-- Lista de pratos -->
+    <h2>
+        {% if categoria_atual %}
+        Pratos de {{ categoria_atual|capitalize }}
+        {% else %}
+        Todos os pratos
+        {% endif %}
+    </h2>
+
+    <div class="pratos">
+
+        {% for prato in pratos %}
+
+        <article class="prato">
+
+            <!-- Thumbnail clicável -->
+            <a href="{{ url_for(
+                    'pratos.detalhes',
+                    pratos_id=pratos.id
+                ) }}">
+
+                <img src="{{ pratos.imagem }}" alt="{{ pratos.nome }}">
+
+            </a>
+
+            <div class="pratos-conteudo">
+
+                <h3>{{ pratos.nome }}</h3>
+
+                <p>{{ pratos.descricao }}</p>
+
+                <p class="preco">
+                    R$ {{ "%.2f"|format(
+                    pratos.preco_centavos / 100
+                    ) }}
+                </p>
+
+                <!-- Ver detalhes -->
+                <a class="botao" href="{{ url_for(
+                            'pratos.detalhes',
+                            pratos_id=pratos.id
+                        ) }}">
+                    Ver detalhes
+                </a>
+
+                <!-- Adicionar ao carrinho -->
+                <form method="POST" action="{{ url_for('pedido.adicionar') }}">
+
+                    <input type="hidden" name="pratos_id" value="{{ pratos.id }}">
+
+                    {% if pratos.disponivel %}
+
+                    <button type="submit">
+                        Adicionar ao pedido
+                    </button>
+
+                    {% else %}
+
+                    <button type="button" disabled>
+                        Indisponível
+                    </button>
+
+                    {% endif %}
+
+                </form>
+
+            </div>
+
+        </article>
+
+        {% else %}
+
+        <p>Nenhum prato disponível nesta categoria.</p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

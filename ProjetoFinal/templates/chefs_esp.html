@@ -1,0 +1,71 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+    Cozinheiros disponíveis
+{% endblock %}
+
+{% block conteudo %}
+
+<h2>Chefs disponíveis</h2>
+
+{% if chefs %}
+
+    {% for chef in chefs %}
+
+        <section class="auth-card">
+
+            <h3>{{ chef.nome }}</h3>
+
+            <img
+                class="foto-perfil"
+                src="{{ url_for(
+                    'static',
+                    filename=chef.foto_url or 'images/fotos_perfil/usuarios/template_usuarios.jpeg'
+                ) }}"
+                alt="Foto de {{ chef.nome }}"
+            >
+
+            <p>Usuário: {{ chef.usuario }}</p>
+
+            {% if chef.biografia %}
+                <p>{{ chef.biografia }}</p>
+            {% endif %}
+
+            {% if origem == "categoria" %}
+
+                <a href="{{ url_for(
+                    'chefs.selecionar_categoria',
+                    categoria_id=categoria_id,
+                    chef_id=chef.id
+                ) }}">
+                    Escolher cozinheiro
+                </a>
+
+            {% elif origem == "prato" %}
+
+                <a href="{{ url_for(
+                    'chefs.selecionar_prato',
+                    id_p=id_p,
+                    chef_id=chef.id
+                ) }}">
+                    Escolher cozinheiro
+                </a>
+
+            {% endif %}
+
+        </section>
+
+    {% endfor %}
+
+{% else %}
+
+    <p>Não há cozinheiros relacionados a esta busca.</p>
+
+{% endif %}
+
+<a href="{{ url_for('categorias.main') }}">
+    Voltar às categorias
+</a>
+
+{% endblock %}
