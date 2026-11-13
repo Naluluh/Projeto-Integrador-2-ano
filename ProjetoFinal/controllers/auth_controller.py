@@ -1,7 +1,7 @@
 
 """Rotas públicas de autenticação e cadastro de funcionários."""
 
-import sqlite3
+from psycopg import IntegrityError
 import os
 
 from flask import (
@@ -208,7 +208,7 @@ def cadastro():
                     url_for("auth.login")
                 )
 
-            except sqlite3.IntegrityError:
+            except IntegrityError:
 
                 # O usuário possui uma restrição UNIQUE.
                 flash(
@@ -331,7 +331,7 @@ def cadastro_adm():
                     url_for("main.inicio")
                 )
 
-            except sqlite3.IntegrityError:
+            except IntegrityError:
 
                 # O usuário possui uma restrição UNIQUE.
                 flash(

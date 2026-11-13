@@ -18,7 +18,7 @@ def listar_por_prato(produto_id):
         JOIN ingredientes i
             ON i.id = pi.ingrediente_id
         WHERE pi.produto_id = ?
-        ORDER BY i.nome COLLATE NOCASE
+        ORDER BY i.nome
         """,
         (produto_id,)
     ).fetchall()

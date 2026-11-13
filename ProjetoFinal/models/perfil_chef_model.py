@@ -26,11 +26,12 @@ def _salvar_categorias(db, perfil_id, categoria_ids):
     for categoria_id in categoria_ids:
         db.execute(
             """
-            INSERT OR IGNORE INTO perfis_categorias (
+            INSERT INTO perfis_categorias (
                 perfil_id,
                 categoria_id
             )
             VALUES (?, ?)
+            ON CONFLICT DO NOTHING
             """,
             (perfil_id, int(categoria_id))
         )

@@ -16,11 +16,8 @@ class Config:
         "troque-esta-chave-em-producao"
     )
 
-    # Caminho do banco SQLite do restaurante.
-    DATABASE = os.environ.get(
-        "DATABASE",
-        str(BASE_DIR / "instance" / "restaurantev2.db")
-    )
+    # URL PostgreSQL hospedada no Neon.
+    DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("DATABASE")
 
     # Impede que JavaScript acesse diretamente o cookie da sessão.
     SESSION_COOKIE_HTTPONLY = True

@@ -28,7 +28,7 @@ def _carregar_formulario(prato=None):
         ingredientes=get_db().execute("""
             SELECT id, nome, unidade, estoque
             FROM ingredientes
-            ORDER BY nome COLLATE NOCASE
+            ORDER BY nome
         """).fetchall(),
         ingredientes_produto=(
             prato_model.listar_ingredientes(prato["id"])

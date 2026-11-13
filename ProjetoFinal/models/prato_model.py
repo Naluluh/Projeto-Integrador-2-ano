@@ -13,8 +13,8 @@ def listar(busca=""):
         SELECT produtos.*, categorias.nome AS categoria_nome
         FROM produtos
         JOIN categorias ON produtos.categoria_id = categorias.id
-        WHERE produtos.nome LIKE ? OR categorias.nome LIKE ?
-        ORDER BY produtos.nome COLLATE NOCASE
+        WHERE produtos.nome ILIKE ? OR categorias.nome ILIKE ?
+        ORDER BY produtos.nome
     """, (termo, termo)).fetchall()
 
 
@@ -58,7 +58,7 @@ def atualizar(produto_id, nome, descricao, categoria_id,
 def listar_para_pedido():
     return get_db().execute("""
         SELECT produtos.*,
-               GROUP_CONCAT(usuarios.nome, ', ') AS chef_nome
+               STRING_AGG(usuarios.nome, ', ') AS chef_nome
         FROM produtos
         LEFT JOIN produto_chefs
             ON produtos.id = produto_chefs.produto_id
@@ -66,7 +66,7 @@ def listar_para_pedido():
             ON produto_chefs.chef_id = usuarios.id
             AND usuarios.cargo = 'cozinheiro'
         GROUP BY produtos.id
-        ORDER BY produtos.nome COLLATE NOCASE
+        ORDER BY produtos.nome
     """).fetchall()
 
 
@@ -76,7 +76,7 @@ def listar_por_categoria(categoria_id):
         FROM produtos
         JOIN categorias ON produtos.categoria_id = categorias.id
         WHERE produtos.categoria_id = ?
-        ORDER BY produtos.nome COLLATE NOCASE
+        ORDER BY produtos.nome
     """, (categoria_id,)).fetchall()
 
 
@@ -84,7 +84,7 @@ def listar_categorias():
     return get_db().execute("""
         SELECT id, nome, foto_url
         FROM categorias
-        ORDER BY nome COLLATE NOCASE
+        ORDER BY nome
     """).fetchall()
 
 
@@ -106,8 +106,8 @@ def listar_ingredientes(produto_id):
             i.nome,
             i.unidade,
             pi.quantidade,
-            GROUP_CONCAT(
-                ia.id || ':' || ia.nome || ':' || pia.quantidade,
+            STRING_AGG(
+                ia.id::text || ':' || ia.nome || ':' || pia.quantidade::text,
                 '|'
             ) AS alternativas
         FROM produto_ingredientes AS pi
@@ -119,7 +119,7 @@ def listar_ingredientes(produto_id):
             ON ia.id = pia.ingrediente_alternativo_id
         WHERE pi.produto_id = ?
         GROUP BY pi.produto_id, pi.ingrediente_id
-        ORDER BY i.nome COLLATE NOCASE
+        ORDER BY i.nome
     """, (produto_id,)).fetchall()
 
 

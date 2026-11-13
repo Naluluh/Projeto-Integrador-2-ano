@@ -11,8 +11,8 @@ def listar(busca=""):
         """
         SELECT *
         FROM ingredientes
-        WHERE nome LIKE ?
-        ORDER BY nome COLLATE NOCASE
+        WHERE nome ILIKE ?
+        ORDER BY nome
         """,
         (termo,)
     ).fetchall()

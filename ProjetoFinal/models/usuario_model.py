@@ -6,9 +6,9 @@ from database import get_db
 
 def buscar_por_usuario(usuario):
     # Procura um funcionário pelo nome de usuário.
-    # COLLATE NOCASE permite ignorar maiúsculas e minúsculas.
+    # permite ignorar maiúsculas e minúsculas.
     return get_db().execute(
-        "SELECT * FROM usuarios WHERE usuario = ? COLLATE NOCASE",
+        "SELECT * FROM usuarios WHERE usuario = ?",
         (usuario,)
     ).fetchone()
 
@@ -56,7 +56,7 @@ def listar():
             criado_em,
             foto_url
         FROM usuarios
-        ORDER BY nome COLLATE NOCASE
+        ORDER BY nome
         """
     ).fetchall()
 
