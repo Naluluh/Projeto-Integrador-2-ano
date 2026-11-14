@@ -1,0 +1,48 @@
+{# Componentes reutilizados em vários formulários. #}
+
+{#
+  Campo de senha com botão "Mostrar/Ocultar".
+  regras=true  -> aplica a regra de senha (8 a 32 caracteres, minúscula,
+                  maiúscula, número e símbolo) e mostra a lista de requisitos.
+  confirmar_de -> id do campo de senha que este campo deve repetir.
+#}
+{% macro campo_senha(nome, rotulo, autocomplete="new-password", obrigatorio=true, regras=false, confirmar_de="", placeholder="") -%}
+<label for="{{ nome }}">
+    {{ rotulo }}
+
+    <span class="campo-senha">
+        <input
+            type="password"
+            id="{{ nome }}"
+            name="{{ nome }}"
+            autocomplete="{{ autocomplete }}"
+            {% if obrigatorio %}required{% endif %}
+            {% if regras %}minlength="8" maxlength="32" data-valida-senha{% endif %}
+            {% if confirmar_de %}maxlength="32" data-confirma-senha="{{ confirmar_de }}"{% endif %}
+            {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        >
+
+        <button
+            type="button"
+            class="ver-senha"
+            data-alvo="{{ nome }}"
+            aria-pressed="false"
+            aria-label="Mostrar {{ rotulo|lower }}"
+        >Mostrar</button>
+    </span>
+</label>
+
+{% if regras %}
+<ul class="regras-senha" data-regras-de="{{ nome }}" aria-live="polite">
+    <li data-regra="tamanho">De 8 a 32 caracteres</li>
+    <li data-regra="minuscula">Uma letra minúscula (a-z)</li>
+    <li data-regra="maiuscula">Uma letra maiúscula (A-Z)</li>
+    <li data-regra="numero">Um número (0-9)</li>
+    <li data-regra="simbolo">Um símbolo especial (! @ # $ % &amp; *)</li>
+</ul>
+{% endif %}
+
+{% if confirmar_de %}
+<small class="erro-confirmacao" data-erro-de="{{ nome }}" aria-live="polite"></small>
+{% endif %}
+{%- endmacro %}

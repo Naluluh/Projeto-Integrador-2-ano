@@ -1,0 +1,176 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+    Categoria específica
+{% endblock %}
+
+{% block conteudo %}
+
+{% set chef_selecionado =
+    session.get('chef_id')
+    and session.get('categoria_id') == categoria_id
+%}
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>{{ nome }}</h1>
+        {% if chef_selecionado %}
+            <p>Produtos disponíveis com o cozinheiro selecionado</p>
+        {% else %}
+            <p>Produtos desta categoria</p>
+        {% endif %}
+    </div>
+</div>
+
+
+{% if produtos %}
+
+    <section class="cards" aria-label="Produtos">
+
+    {% for t in produtos %}
+
+        <article class="card card--item">
+
+            <button
+                type="button"
+                class="botao-imagem"
+                aria-label="Ver detalhes de {{ t['nome'] }}"
+                onclick="ger_espec(event, '{{ loop.index }}', 0)"
+            >
+                <img
+                    class="foto-perfil"
+                    src="{{ foto_src(t['foto_url'], 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
+                    alt=""
+                >
+            </button>
+
+            <h2>
+                {{ t['nome'] }}
+                {% if not t['ativo'] %}
+                    <span class="selo aviso">Indisponível (oculto)</span>
+                {% endif %}
+            </h2>
+
+            {% if chef_selecionado %}
+
+                {% if session.get('cargo') in ['cliente', 'administrador'] and t['ativo'] %}
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('pedido.adicionar') }}"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="produto_id"
+                            value="{{ t['id'] }}"
+                        >
+
+                        <label for="quantidade_{{ t['id'] }}">
+                            Quantidade:
+                        </label>
+
+                        <input
+                            type="number"
+                            id="quantidade_{{ t['id'] }}"
+                            name="quantidade"
+                            min="1"
+                            value="1"
+                            required
+                        >
+
+                        <button type="submit" class="botao primario">
+                            Adicionar ao carrinho
+                        </button>
+
+                    </form>
+
+                {% else %}
+
+                    <p>Entre como cliente para adicionar produtos ao pedido.</p>
+
+                    <a class="botao primario" href="{{ url_for('auth.login') }}">
+                        Fazer login
+                    </a>
+
+                {% endif %}
+
+            {% else %}
+
+                <a class="botao primario" href="{{ url_for(
+                    'chefs.por_prato',
+                    id_p=t['id']
+                ) }}">
+                    Ver cozinheiros deste produto
+                </a>
+
+            {% endif %}
+
+        </article>
+
+        <!-- Janela com os detalhes do produto (aberta por JavaScript) -->
+        <section class="pop-up" id="especific{{ loop.index }}" aria-label="Detalhes de {{ t['nome'] }}">
+
+            <h3>{{ t['nome'] }}</h3>
+
+            <p>{{ t['descricao'] }}</p>
+
+            <p>
+                <b>Categoria:</b> {{ nome }}
+            </p>
+
+            <button
+                class="botao secundario"
+                type="button"
+                onclick="ger_espec(event, '{{ loop.index }}', 1)"
+            >
+                Fechar
+            </button>
+
+        </section>
+
+    {% endfor %}
+
+    </section>
+
+{% else %}
+
+    <p class="vazio">Nenhum produto disponível nesta categoria para este cozinheiro.</p>
+
+{% endif %}
+
+
+<div class="acoes-finais">
+
+    {% if chef_selecionado %}
+
+        <a class="botao secundario" href="{{ url_for(
+            'chefs.por_categoria',
+            categoria_id=categoria_id
+        ) }}">
+            Trocar cozinheiro
+        </a>
+
+        <a class="botao primario" href="{{ url_for('pedido.novo') }}">
+            Ver carrinho
+        </a>
+
+    {% else %}
+
+        <a class="botao primario" href="{{ url_for(
+            'chefs.por_categoria',
+            categoria_id=categoria_id
+        ) }}">
+            Ver cozinheiros desta categoria
+        </a>
+
+    {% endif %}
+
+    <a class="botao secundario" href="{{ url_for('categorias.main') }}">
+        Voltar às categorias
+    </a>
+
+</div>
+
+{% endblock %}

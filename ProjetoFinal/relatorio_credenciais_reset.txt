@@ -1,0 +1,39 @@
+Nome: Administrador
+Usuário: admin
+Cargo: administrador
+Senha inicial: msq98?ml87?E
+
+Nome: Mariana Alves
+Usuário: chef.mariana
+Cargo: cozinheiro
+Senha inicial: &0y4vaDXYIZ6
+
+Nome: Rafael Souza
+Usuário: chef.rafael
+Cargo: cozinheiro
+Senha inicial: z9YC&#D*q9Ps
+
+Nome: Beatriz Lima
+Usuário: chef.beatriz
+Cargo: cozinheiro
+Senha inicial: C&N9v0iBx2?7
+
+Nome: Ana Martins
+Usuário: cliente.ana
+Cargo: cliente
+Senha inicial: &ItT%?z$j7Fu
+
+Nome: Bruno Carvalho
+Usuário: cliente.bruno
+Cargo: cliente
+Senha inicial: cIT9!iQPdm2s
+
+Nome: Carla Mendes
+Usuário: cliente.carla
+Cargo: cliente
+Senha inicial: t4B1QDj$tQAt
+
+Nome: Diego Santos
+Usuário: cliente.diego
+Cargo: cliente
+Senha inicial: vvaSXg6$@P69
