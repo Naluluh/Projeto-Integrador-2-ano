@@ -1,6 +1,8 @@
 """Application Factory do Sabor e Clic."""
 
-from flask import Flask, redirect, render_template, request, session, url_for
+import time
+
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from config import Config
 from database import init_app as init_database
@@ -35,25 +37,69 @@ def create_app(test_config=None):
     # Middleware executado antes de cada requisição.
     @app.before_request
     def exigir_login():
-        # Rotas que podem ser acessadas sem funcionário autenticado.
+        # Rotas que podem ser acessadas sem estar autenticado.
         rotas_publicas = {
             "auth.login",
             "auth.cadastro",
+            "auth.esqueci_senha",
             "static",
         }
 
-        # Se a rota não for pública e não houver funcionário na sessão,
-        # o usuário é redirecionado para o login.
+        if request.endpoint in rotas_publicas:
+            return None
+
+        # Só guarda a página de destino quando ela pode ser aberta por GET.
+        proxima = request.path if request.method == "GET" else None
+
+        # Sem sessão: redireciona para o login.
+        if "usuario_id" not in session:
+            return redirect(url_for("auth.login", proxima=proxima))
+
+        # Timeout de inatividade: sem nenhuma requisição por 30 minutos,
+        # a sessão é encerrada. A checagem é feita aqui, no servidor, e não
+        # só no navegador, para não depender do JavaScript.
+        agora = int(time.time())
+        ultima = session.get("ultima_atividade")
+
         if (
-            request.endpoint not in rotas_publicas
-            and "usuario_id" not in session
+            ultima is None
+            or agora - ultima > app.config["INATIVIDADE_SEGUNDOS"]
         ):
-            return redirect(
-                url_for(
-                    "auth.login",
-                    proxima=request.path
-                )
+            session.clear()
+
+            flash(
+                "Sua sessão foi encerrada após 30 minutos de inatividade. "
+                "Faça login novamente.",
+                "aviso"
             )
+
+            return redirect(url_for("auth.login", proxima=proxima))
+
+        # Pessoa ativa: renova o prazo.
+        session["ultima_atividade"] = agora
+
+        # Entrou com senha temporária: só pode trocar a senha (ou sair).
+        if session.get("trocar_senha") and request.endpoint not in {
+            "auth.alterar_senha",
+            "auth.logout",
+            "main.sessao_ping",
+        }:
+            return redirect(url_for("auth.alterar_senha"))
+
+        return None
+
+    # Páginas com dados da conta não devem ficar no cache do navegador
+    # (o botão "voltar" não mostra a página depois de sair).
+    @app.after_request
+    def nao_guardar_cache(resposta):
+        if resposta.mimetype == "text/html":
+            resposta.headers["Cache-Control"] = "no-store"
+        return resposta
+
+    # Disponibiliza o prazo de inatividade para o JavaScript (base.html).
+    @app.context_processor
+    def dados_da_sessao():
+        return {"inatividade_segundos": app.config["INATIVIDADE_SEGUNDOS"]}
 
     # Página personalizada para erros 404.
     @app.errorhandler(404)

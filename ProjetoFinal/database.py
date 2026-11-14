@@ -79,6 +79,41 @@ CREATE TABLE IF NOT EXISTS imagens (
 );
 '''
 
+
+# Alterações do esquema aplicadas a bancos que já existem (Neon). Todas são
+# idempotentes (IF NOT EXISTS): rodam sem problema quantas vezes forem
+# necessárias e também em bancos novos.
+MIGRACOES = [
+    # Produto visível (disponível) ou oculto para clientes e cozinheiros.
+    "ALTER TABLE produtos ADD COLUMN IF NOT EXISTS ativo BOOLEAN NOT NULL DEFAULT TRUE",
+
+    # Senha temporária (gerada pelo administrador) obriga a trocar no login.
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN NOT NULL DEFAULT FALSE",
+
+    # Quando a pessoa clicou em "esqueci minha senha" (segundos desde 1970).
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_solicitado_em BIGINT",
+
+    # Controle de tentativas de login (guardado no banco porque na Vercel
+    # cada requisição pode cair em uma instância diferente).
+    """CREATE TABLE IF NOT EXISTS login_tentativas (
+        chave TEXT PRIMARY KEY,
+        tentativas INTEGER NOT NULL DEFAULT 0,
+        atualizado_em BIGINT NOT NULL DEFAULT 0,
+        bloqueado_ate BIGINT NOT NULL DEFAULT 0
+    )""",
+
+    # Registro de quais porções do item foram feitas com ingrediente alternativo.
+    """CREATE TABLE IF NOT EXISTS itens_pedido_substituicoes (
+        id BIGSERIAL PRIMARY KEY,
+        item_pedido_id BIGINT NOT NULL REFERENCES itens_pedido(id) ON DELETE CASCADE,
+        ingrediente_original TEXT NOT NULL,
+        ingrediente_alternativo TEXT NOT NULL,
+        unidade TEXT NOT NULL DEFAULT '',
+        porcoes INTEGER NOT NULL CHECK(porcoes > 0),
+        quantidade DOUBLE PRECISION NOT NULL CHECK(quantidade >= 0)
+    )""",
+]
+
 _ID_TABLES = {'usuarios','categorias','produtos','enderecos','ingredientes','pedidos','itens_pedido','perfis','imagens'}
 
 class CursorCompat:
@@ -171,11 +206,16 @@ def _garantir_esquema(db):
     if not existe:
         db.executescript(SCHEMA)
 
+    # Alterações para bancos já existentes (ver MIGRACOES).
+    for comando in MIGRACOES:
+        db.conn.execute(comando)
+
     usuario = db.execute('SELECT 1 FROM usuarios LIMIT 1').fetchone()
     if not usuario:
         senha_inicial = os.environ.get('ADMIN_SENHA_INICIAL') or 'admin123'
-        db.execute('''INSERT INTO usuarios (nome, usuario, senha_hash, cargo)
-                      VALUES (?, ?, ?, ?)''',
+        # senha_temporaria = TRUE: o admin escolhe uma senha forte no 1º login.
+        db.execute('''INSERT INTO usuarios (nome, usuario, senha_hash, cargo, senha_temporaria)
+                      VALUES (?, ?, ?, ?, TRUE)''',
                    ('Administrador', 'admin', generate_password_hash(senha_inicial), 'administrador'))
     db.commit()
 

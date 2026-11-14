@@ -54,9 +54,11 @@ def listar():
             usuario,
             cargo,
             criado_em,
-            foto_url
+            foto_url,
+            senha_temporaria,
+            reset_solicitado_em
         FROM usuarios
-        ORDER BY nome
+        ORDER BY (reset_solicitado_em IS NULL), nome
         """
     ).fetchall()
 
@@ -155,3 +157,44 @@ def excluir(usuario_id):
         # Ex.: usuário com pedidos registrados (chave estrangeira).
         db.rollback()
         raise
+
+
+def atualizar_senha(usuario_id, senha_hash, temporaria=False):
+    """Troca a senha. Também encerra qualquer pedido de redefinição."""
+
+    db = get_db()
+
+    db.execute(
+        """
+        UPDATE usuarios
+        SET senha_hash = ?,
+            senha_temporaria = ?,
+            reset_solicitado_em = NULL
+        WHERE id = ?
+        """,
+        (senha_hash, bool(temporaria), usuario_id)
+    )
+
+    db.commit()
+
+
+def solicitar_redefinicao(usuario, agora):
+    """Marca que a pessoa esqueceu a senha (o administrador será avisado).
+
+    Devolve True se o usuário existe.
+    """
+
+    db = get_db()
+
+    cursor = db.execute(
+        """
+        UPDATE usuarios
+        SET reset_solicitado_em = ?
+        WHERE LOWER(usuario) = LOWER(?)
+        """,
+        (agora, usuario)
+    )
+
+    db.commit()
+
+    return cursor.rowcount > 0

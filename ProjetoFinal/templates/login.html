@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
 
 {% block titulo %}
 Entrar · Sabor & Clic
@@ -19,6 +20,10 @@ Entrar · Sabor & Clic
         class="formulario"
     >
 
+        {% if proxima %}
+            <input type="hidden" name="proxima" value="{{ proxima }}">
+        {% endif %}
+
         <!-- Usuário do funcionário. -->
         <label>
             Usuário
@@ -31,17 +36,8 @@ Entrar · Sabor & Clic
             >
         </label>
 
-        <!-- Senha do funcionário. -->
-        <label>
-            Senha
-
-            <input
-                type="password"
-                name="senha"
-                required
-                autocomplete="current-password"
-            >
-        </label>
+        <!-- Senha (com botão para mostrar/ocultar). -->
+        {{ campo_senha("senha", "Senha", autocomplete="current-password") }}
 
         <button
             class="botao primario"
@@ -51,6 +47,12 @@ Entrar · Sabor & Clic
         </button>
 
     </form>
+
+    <p>
+        <a href="{{ url_for('auth.esqueci_senha') }}">
+            Esqueci minha senha
+        </a>
+    </p>
 
     <p>
         <a href="{{ url_for('auth.cadastro') }}">

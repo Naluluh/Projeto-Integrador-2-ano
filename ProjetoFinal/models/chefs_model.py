@@ -115,8 +115,11 @@ def verificar_chef_produto(chef_id, produto_id):
     return resultado is not None
 
 
-def produtos_chef_categoria(chef_id, categoria_id):
-    """Lista produtos da categoria preparados pelo cozinheiro."""
+def produtos_chef_categoria(chef_id, categoria_id, incluir_inativos=False):
+    """Lista produtos da categoria preparados pelo cozinheiro.
+
+    Pratos marcados como indisponíveis só aparecem para quem pode gerenciá-los.
+    """
 
     db = get_db()
 
@@ -131,10 +134,11 @@ def produtos_chef_categoria(chef_id, categoria_id):
 
         WHERE pc.chef_id = ?
         AND p.categoria_id = ?
+        AND (p.ativo OR ?)
 
         ORDER BY p.nome
         """,
-        (chef_id, categoria_id)
+        (chef_id, categoria_id, bool(incluir_inativos))
     ).fetchall()
 
     return produtos
@@ -158,3 +162,92 @@ def categoria_por_produto(produto_id):
         return None
 
     return resultado["categoria_id"]
+
+
+def listar_cozinheiros(incluir_inativos=False):
+    """Lista todos os cozinheiros, com um resumo do perfil."""
+
+    return get_db().execute(
+        """
+        SELECT
+            u.id,
+            u.nome,
+            u.usuario,
+            u.foto_url,
+            p.id AS perfil_id,
+            p.formacao,
+            p.biografia,
+            (
+                SELECT COUNT(*) FROM perfis_categorias AS pc
+                WHERE pc.perfil_id = p.id
+            ) AS total_categorias,
+            (
+                SELECT COUNT(*)
+                FROM produto_chefs AS pch
+                JOIN produtos AS pr ON pr.id = pch.produto_id
+                WHERE pch.chef_id = u.id AND (pr.ativo OR ?)
+            ) AS total_produtos
+        FROM usuarios AS u
+        LEFT JOIN perfis AS p ON p.usuario_id = u.id
+        WHERE u.cargo = 'cozinheiro'
+        ORDER BY u.nome
+        """,
+        (bool(incluir_inativos),)
+    ).fetchall()
+
+
+def buscar_cozinheiro(chef_id):
+    """Dados do cadastro do cozinheiro + perfil (sem a senha)."""
+
+    return get_db().execute(
+        """
+        SELECT
+            u.id,
+            u.nome,
+            u.usuario,
+            u.foto_url,
+            u.criado_em,
+            p.id AS perfil_id,
+            p.formacao,
+            p.biografia,
+            p.experiencia
+        FROM usuarios AS u
+        LEFT JOIN perfis AS p ON p.usuario_id = u.id
+        WHERE u.id = ? AND u.cargo = 'cozinheiro'
+        """,
+        (chef_id,)
+    ).fetchone()
+
+
+def categorias_do_chef(chef_id):
+    """Categorias pelas quais o cozinheiro é responsável."""
+
+    return get_db().execute(
+        """
+        SELECT c.id, c.nome, c.foto_url
+        FROM categorias AS c
+        JOIN perfis_categorias AS pc ON pc.categoria_id = c.id
+        JOIN perfis AS p ON p.id = pc.perfil_id
+        WHERE p.usuario_id = ?
+        ORDER BY c.nome
+        """,
+        (chef_id,)
+    ).fetchall()
+
+
+def produtos_do_chef(chef_id, incluir_inativos=False):
+    """Pratos pelos quais o cozinheiro é responsável."""
+
+    return get_db().execute(
+        """
+        SELECT
+            pr.*,
+            c.nome AS categoria_nome
+        FROM produto_chefs AS pc
+        JOIN produtos AS pr ON pr.id = pc.produto_id
+        JOIN categorias AS c ON c.id = pr.categoria_id
+        WHERE pc.chef_id = ? AND (pr.ativo OR ?)
+        ORDER BY c.nome, pr.nome
+        """,
+        (chef_id, bool(incluir_inativos))
+    ).fetchall()

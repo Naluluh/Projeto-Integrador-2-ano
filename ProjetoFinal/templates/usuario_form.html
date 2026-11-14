@@ -1,70 +1,114 @@
 {% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
 
-{% block titulo %}Usuários - Sabor & Clic{% endblock %}
+{% block titulo %}
+{% if usuario %}Editar usuário{% else %}Novo usuário{% endif %} - Sabor & Clic
+{% endblock %}
 
 {% block conteudo %}
 
-<section class="pagina">
+<section class="auth-card">
 
-```
-<div class="cabecalho-pagina">
-    <h1>Usuários cadastrados</h1>
-    <p>Lista de usuários registrados no sistema.</p>
-</div>
+    <h1>
+        {% if usuario %}
+            Editar usuário
+        {% else %}
+            Novo usuário
+        {% endif %}
+    </h1>
 
-{% if usuarios %}
+    <form
+        method="post"
+        class="formulario"
+        enctype="multipart/form-data"
+    >
 
-    <div class="tabela-container">
+        <label>
+            Nome completo
 
-        <table>
+            <input
+                name="nome"
+                required
+                minlength="2"
+                value="{{ usuario['nome'] if usuario else '' }}"
+            >
+        </label>
 
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Usuário</th>
-                    <th>Cargo</th>
-                    <th>Data de cadastro</th>
-                </tr>
-            </thead>
+        <label>
+            Usuário
 
-            <tbody>
+            <input
+                name="usuario"
+                required
+                minlength="3"
+                autocomplete="username"
+                value="{{ usuario['usuario'] if usuario else '' }}"
+            >
+        </label>
 
-                {% for usuario in usuarios %}
+        {% if usuario %}
+            <p class="dica">
+                Deixe a senha em branco para manter a senha atual.
+            </p>
+        {% endif %}
 
-                    <tr>
-                        <td>{{ usuario["id"] }}</td>
+        {{ campo_senha("senha", "Senha", regras=true, obrigatorio=(not usuario)) }}
 
-                        <td>{{ usuario["nome"] }}</td>
+        {{ campo_senha("confirmar_senha", "Confirmar senha", confirmar_de="senha", obrigatorio=(not usuario)) }}
 
-                        <td>{{ usuario["usuario"] }}</td>
+        <label>
+            Cargo
 
-                        <td>
-                            {{ usuario["cargo"]|capitalize }}
-                        </td>
+            <select name="cargo" required>
+                <option value="">Selecione...</option>
 
-                        <td>{{ usuario["criado_em"]|datahora }}</td>
-                    </tr>
-
+                {% for valor, nome in [
+                    ('cliente', 'Cliente'),
+                    ('cozinheiro', 'Cozinheiro'),
+                    ('administrador', 'Administrador')
+                ] %}
+                <option value="{{ valor }}"
+                    {% if usuario and usuario['cargo'] == valor %}selected{% endif %}>
+                    {{ nome }}
+                </option>
                 {% endfor %}
+            </select>
+        </label>
 
-            </tbody>
+        {% if usuario and usuario['foto_url'] %}
+            <p>Foto atual:</p>
 
-        </table>
+            <img
+                src="{{ foto_src(usuario['foto_url']) }}"
+                alt="Foto atual do usuário"
+                class="foto-perfil"
+            >
+        {% endif %}
 
-    </div>
+        <label>
+            Foto de perfil
 
-{% else %}
+            <input
+                type="file"
+                name="foto_perfil"
+                accept="image/*"
+            >
+        </label>
 
-    <div class="vazio">
-        <h2>Nenhum usuário cadastrado</h2>
+        <button
+            class="botao primario"
+            type="submit"
+        >
+            {% if usuario %}Salvar alterações{% else %}Cadastrar usuário{% endif %}
+        </button>
 
-        <p>
-            Não existem usuários para exibir.
-        </p>
-    </div>
+    </form>
 
-{% endif %}
+    <p>
+        <a href="{{ url_for('usuario.listar') }}">
+            Voltar
+        </a>
+    </p>
 
 </section>
 

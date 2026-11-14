@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block titulo %}
@@ -7,7 +6,20 @@
 
 {% block conteudo %}
 
-<h2>Chefs disponíveis</h2>
+<h2>
+    {% if origem == "prato" and produto %}
+        Quem prepara {{ produto.nome }}
+    {% else %}
+        Chefs disponíveis
+    {% endif %}
+</h2>
+
+{% if origem == "prato" and pedido_pendente and pedido_pendente.produto_id == id_p %}
+    <p class="dica">
+        Escolha um cozinheiro para colocar
+        {{ pedido_pendente.quantidade }} × {{ produto.nome }} no seu pedido.
+    </p>
+{% endif %}
 
 {% if chefs %}
 
@@ -26,12 +38,16 @@
             <p>Usuário: {{ chef.usuario }}</p>
 
             {% if chef.biografia %}
-                <p>{{ chef.biografia }}</p>
+                <p>{{ chef.biografia|truncate(160) }}</p>
             {% endif %}
+
+            <a href="{{ url_for('chefs.perfil', chef_id=chef.id) }}">
+                Ver perfil completo
+            </a>
 
             {% if origem == "categoria" %}
 
-                <a href="{{ url_for(
+                <a class="botao primario" href="{{ url_for(
                     'chefs.selecionar_categoria',
                     categoria_id=categoria_id,
                     chef_id=chef.id
@@ -41,7 +57,7 @@
 
             {% elif origem == "prato" %}
 
-                <a href="{{ url_for(
+                <a class="botao primario" href="{{ url_for(
                     'chefs.selecionar_prato',
                     id_p=id_p,
                     chef_id=chef.id

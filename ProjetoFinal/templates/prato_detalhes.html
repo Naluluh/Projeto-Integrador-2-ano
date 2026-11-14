@@ -16,7 +16,35 @@
         ← Voltar ao cardápio
     </a>
 
-    <h1>{{ prato.nome }}</h1>
+    <h1>
+        {{ prato.nome }}
+        {% if not prato.ativo %}
+            <span class="selo aviso">Indisponível (oculto)</span>
+        {% endif %}
+    </h1>
+
+    {# Somente o administrador escolhe se o prato fica visível para os outros. #}
+    {% if session.get('cargo') == 'administrador' %}
+        <form
+            method="post"
+            action="{{ url_for('prato.alterar_visibilidade', prato_id=prato.id) }}"
+        >
+            <input type="hidden" name="proxima" value="{{ url_for('prato.detalhes', prato_id=prato.id) }}">
+            <input type="hidden" name="ativo" value="{{ '0' if prato.ativo else '1' }}">
+
+            <button class="botao {{ 'secundario' if prato.ativo else 'primario' }}" type="submit">
+                {{ 'Deixar indisponível' if prato.ativo else 'Deixar disponível' }}
+            </button>
+
+            <small class="dica">
+                {% if prato.ativo %}
+                    Indisponível = oculto para clientes e cozinheiros. Pedidos antigos não mudam.
+                {% else %}
+                    Este prato está oculto para clientes e cozinheiros.
+                {% endif %}
+            </small>
+        </form>
+    {% endif %}
 
     <img
         src="{{ foto_src(prato.foto_url, 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
@@ -32,9 +60,33 @@
 
     <ul>
         {% for ingrediente in ingredientes %}
-            <li>{{ ingrediente.nome }} — {{ ingrediente.quantidade }} {{ ingrediente.unidade }}</li>
+            <li>
+                {{ ingrediente.nome }} — {{ ingrediente.quantidade }} {{ ingrediente.unidade }}
+
+                {% for alt in alternativas.get(ingrediente.ingrediente_id, []) %}
+                    <br>
+                    <small class="dica">
+                        Alternativa se faltar no estoque: {{ alt.nome }}
+                        — {{ alt.quantidade }} {{ alt.unidade }}
+                    </small>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
+
+    <h2>Cozinheiros</h2>
+
+    {% if chefs %}
+        <ul>
+            {% for chef in chefs %}
+                <li>
+                    <a href="{{ url_for('chefs.perfil', chef_id=chef.id) }}">{{ chef.nome }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhum cozinheiro responsável por este prato.</p>
+    {% endif %}
 
     <h2>Preço</h2>
 
@@ -42,6 +94,7 @@
         {{ prato.preco_centavos|moeda }}
     </p>
 
+    {% if prato.ativo and session.get('cargo') in ['cliente', 'administrador'] %}
     <form
         method="POST"
         action="{{ url_for('pedido.adicionar') }}"
@@ -71,6 +124,7 @@
         </button>
 
     </form>
+    {% endif %}
 
 </div>
 

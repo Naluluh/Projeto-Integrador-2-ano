@@ -22,16 +22,19 @@ def id_categoria(categoria):
 
     return busca["id"]
 
-def mostrar_produtos(c):
+def mostrar_produtos(c, incluir_inativos=False):
     categoria = id_categoria(c)
 
     if categoria is None:
         return []
 
+    # Pratos indisponíveis ficam ocultos, exceto para o administrador.
     return get_db().execute('''
     SELECT * from produtos
     WHERE categoria_id = ?
-    ''', (categoria,)).fetchall()
+    AND (ativo OR ?)
+    ORDER BY nome
+    ''', (categoria, bool(incluir_inativos))).fetchall()
 
 def nome_categoria(id):
     pesquisa = get_db().execute('''

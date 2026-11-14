@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Cozinheiros · Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Nossos cozinheiros</h1>
+        <p>Conheça quem prepara os pratos do restaurante.</p>
+    </div>
+</div>
+
+{% if chefs %}
+
+<div class="grade-chefs">
+
+    {% for chef in chefs %}
+
+    <article class="card-chef">
+
+        <img
+            class="foto-perfil"
+            src="{{ foto_src(chef.foto_url, 'images/fotos_perfil/usuarios/template_usuarios.jpeg') }}"
+            alt="Foto de {{ chef.nome }}"
+        >
+
+        <h2>{{ chef.nome }}</h2>
+
+        {% if chef.formacao %}
+            <p class="dica">{{ chef.formacao }}</p>
+        {% endif %}
+
+        {% if chef.biografia %}
+            <p>{{ chef.biografia|truncate(140) }}</p>
+        {% else %}
+            <p class="dica">Perfil ainda não preenchido.</p>
+        {% endif %}
+
+        <p class="dica">
+            {{ chef.total_categorias }}
+            categoria{{ '' if chef.total_categorias == 1 else 's' }}
+            ·
+            {{ chef.total_produtos }}
+            prato{{ '' if chef.total_produtos == 1 else 's' }}
+        </p>
+
+        <a class="botao primario" href="{{ url_for('chefs.perfil', chef_id=chef.id) }}">
+            Ver perfil
+        </a>
+
+    </article>
+
+    {% endfor %}
+
+</div>
+
+{% else %}
+
+<p>Nenhum cozinheiro cadastrado.</p>
+
+{% endif %}
+
+{% endblock %}

@@ -639,3 +639,161 @@ tbody tr:last-child td {
     height: 150px; 
     object-fit: cover;
 }
+
+/* ====================================================
+   SENHAS (mostrar/ocultar, requisitos, confirmação)
+   ==================================================== */
+
+.campo-senha {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.campo-senha input {
+    flex: 1;
+}
+
+.ver-senha {
+    border: 1px solid var(--borda);
+    background: var(--branco);
+    border-radius: 8px;
+    padding: 0 14px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--grafite-escuro);
+}
+
+.ver-senha:hover {
+    border-color: var(--laranja-vibrante);
+}
+
+.regras-senha {
+    list-style: none;
+    margin: -10px 0 0;
+    padding: 0;
+    font-size: 0.82rem;
+    color: var(--texto-mutado);
+}
+
+.regras-senha li::before {
+    content: "○ ";
+}
+
+.regras-senha li.ok {
+    color: #2e7d32;
+}
+
+.regras-senha li.ok::before {
+    content: "✔ ";
+}
+
+.erro-confirmacao {
+    color: var(--erro);
+    min-height: 1em;
+}
+
+.senha-gerada {
+    font-family: monospace;
+    font-size: 1.6rem;
+    letter-spacing: 0.05em;
+    background: #fff4e5;
+    border: 1px dashed var(--laranja-vibrante);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    user-select: all;
+}
+
+/* ====================================================
+   AVISOS, SELOS E PERFIL DOS COZINHEIROS
+   ==================================================== */
+
+.alerta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.alerta.aviso {
+    background: #fff4e5;
+    border: 1px solid var(--laranja-suave);
+    color: #7a4100;
+}
+
+.fechar-alerta {
+    border: none;
+    background: transparent;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+}
+
+.aviso-alt {
+    color: #7a4100;
+    background: #fff4e5;
+    border-left: 3px solid var(--laranja-vibrante);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.dica {
+    color: var(--texto-mutado);
+    font-size: 0.85rem;
+}
+
+.selo {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    background: var(--borda);
+    color: var(--grafite-escuro);
+}
+
+.selo.sucesso { background: #e3f4e5; color: #2e7d32; }
+.selo.aviso { background: #fff4e5; color: #7a4100; }
+.selo.erro { background: #fdecea; color: var(--erro); }
+
+.grade-chefs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.card-chef {
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-borda);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+}
+
+.perfil-chef {
+    width: min(640px, 100%);
+    margin-bottom: 24px;
+}
+
+.miniatura {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.campo-alternativo {
+    margin-top: 8px;
+    padding: 10px;
+    border-left: 3px solid var(--laranja-suave);
+}

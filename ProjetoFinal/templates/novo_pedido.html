@@ -98,6 +98,12 @@ Novo pedido
 
                 <td>
                     {{ item.nome }}
+
+                    {# Decisão do estoque: quais porções usam ingrediente alternativo. #}
+                    {% for mensagem in substituicoes.get(item.produto_id, []) %}
+                        <br>
+                        <small class="aviso-alt">{{ mensagem }}</small>
+                    {% endfor %}
                 </td>
 
                 <td>

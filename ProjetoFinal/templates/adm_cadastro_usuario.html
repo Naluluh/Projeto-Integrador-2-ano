@@ -1,11 +1,11 @@
 {% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
+
 {% block titulo %}
 Cadastro
 {% endblock %}
 
 {% block conteudo %}
-
-<section class="container">
 
 <section class="auth-card">
 
@@ -18,10 +18,14 @@ Cadastro
     >
 
         <label>
-            Foto de Perfil
+            Foto de perfil (opcional)
 
-            <label for="foto_perfil">Foto</label>
-        <input id="foto_perfil" name="foto_perfil" type="file" accept="image/*">
+            <input
+                id="foto_perfil"
+                name="foto_perfil"
+                type="file"
+                accept="image/*"
+            >
         </label>
 
         <label>
@@ -31,6 +35,7 @@ Cadastro
                 name="nome"
                 required
                 minlength="2"
+                value="{{ dados.get('nome', '') }}"
             >
         </label>
 
@@ -42,45 +47,31 @@ Cadastro
                 required
                 minlength="3"
                 autocomplete="username"
+                value="{{ dados.get('usuario', '') }}"
             >
         </label>
 
-        <label>
-            Senha
+        {{ campo_senha("senha", "Criar senha", regras=true) }}
 
-            <input
-                type="password"
-                name="senha"
-                required
-                minlength="6"
-                autocomplete="new-password"
-            >
-        </label>
+        {{ campo_senha("confirmar_senha", "Confirmar senha", confirmar_de="senha") }}
 
         <label>
             Cargo
 
-            <select
-                name="cargo"
-                required
-            >
-                <option value="">
-                    Selecione...
-                </option>
+            <select name="cargo" required>
+                <option value="">Selecione...</option>
 
-                <option value="cliente">
-                    Cliente
+                {% for valor, nome in [
+                    ('cliente', 'Cliente'),
+                    ('cozinheiro', 'Cozinheiro'),
+                    ('administrador', 'Administrador')
+                ] %}
+                <option value="{{ valor }}"
+                    {% if dados.get('cargo') == valor %}selected{% endif %}>
+                    {{ nome }}
                 </option>
-
-                <option value="cozinheiro">
-                    Cozinheiro
-                </option>
-
-                <option value="administrador">
-                    Administrador
-                </option>
+                {% endfor %}
             </select>
-
         </label>
 
         <button
@@ -93,12 +84,11 @@ Cadastro
     </form>
 
     <p>
-        <a href="{{ url_for('auth.login') }}">
-            Voltar ao login
+        <a href="{{ url_for('usuario.listar') }}">
+            Voltar
         </a>
     </p>
 
-</section>
 </section>
 
 {% endblock %}

@@ -65,7 +65,13 @@ Cardápio | Sabor & Clic
                     {{ prato.preco_centavos|moeda }}
                 </p>
 
-                {% if prato.disponivel %}
+                {% if not prato.ativo %}
+
+                <span class="indisponivel">
+                    Oculto para os clientes
+                </span>
+
+                {% elif prato.disponivel %}
 
                 <span class="disponivel">
                     Disponível
@@ -87,12 +93,13 @@ Cardápio | Sabor & Clic
                     Ver detalhes
                 </a>
 
-                <!-- Adicionar ao carrinho -->
+                <!-- Adicionar ao carrinho (somente cliente e administrador). -->
+                {% if session.get('cargo') in ['cliente', 'administrador'] %}
                 <form method="POST" action="{{ url_for('pedido.adicionar') }}">
 
                     <input type="hidden" name="produto_id" value="{{ prato.id }}">
 
-                    {% if prato.disponivel %}
+                    {% if prato.ativo and prato.disponivel %}
 
                     <label for="quantidade_{{ prato.id }}">
                         Quantidade:
@@ -120,6 +127,7 @@ Cardápio | Sabor & Clic
                     {% endif %}
 
                 </form>
+                {% endif %}
 
             </div>
 

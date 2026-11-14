@@ -8,6 +8,7 @@ from flask import (
     render_template,
     request,
     jsonify,
+    session,
     url_for
 )
 
@@ -70,7 +71,11 @@ def main():
 # Exibe os produtos de uma categoria específica
 @categorias_bp.get('/<int:categoria>')
 def exibir(categoria):
-    produtos = mostrar_produtos(categoria)
+    # Pratos indisponíveis só aparecem para o administrador.
+    produtos = mostrar_produtos(
+        categoria,
+        incluir_inativos=(session.get("cargo") == "administrador")
+    )
 
     return render_template(
         'categoria_esp.html',

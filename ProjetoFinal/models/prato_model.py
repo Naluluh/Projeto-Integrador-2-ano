@@ -6,16 +6,34 @@ from database import get_db
 FOTO_PADRAO = "images/fotos_perfil/produtos/template_produtos.jpeg"
 
 
-def listar(busca=""):
+def listar(busca="", incluir_inativos=True):
     db = get_db()
     termo = f"%{busca.strip()}%"
     return db.execute("""
-        SELECT produtos.*, categorias.nome AS categoria_nome
+        SELECT produtos.*, categorias.nome AS categoria_nome,
+               (
+                   SELECT COUNT(*) FROM produto_chefs
+                   WHERE produto_chefs.produto_id = produtos.id
+               ) AS qtd_chefs
         FROM produtos
         JOIN categorias ON produtos.categoria_id = categorias.id
-        WHERE produtos.nome ILIKE ? OR categorias.nome ILIKE ?
+        WHERE (produtos.nome ILIKE ? OR categorias.nome ILIKE ?)
+          AND (produtos.ativo OR ?)
         ORDER BY produtos.nome
-    """, (termo, termo)).fetchall()
+    """, (termo, termo, bool(incluir_inativos))).fetchall()
+
+
+def definir_ativo(produto_id, ativo):
+    """Deixa o prato disponível (visível) ou indisponível (oculto).
+
+    Não apaga nada: pedidos antigos continuam mostrando o prato.
+    """
+    db = get_db()
+    db.execute(
+        "UPDATE produtos SET ativo = ? WHERE id = ?",
+        (bool(ativo), produto_id)
+    )
+    db.commit()
 
 
 def criar(nome, descricao, categoria_id, preco_centavos,
@@ -65,19 +83,21 @@ def listar_para_pedido():
         LEFT JOIN usuarios
             ON produto_chefs.chef_id = usuarios.id
             AND usuarios.cargo = 'cozinheiro'
+        WHERE produtos.ativo
         GROUP BY produtos.id
         ORDER BY produtos.nome
     """).fetchall()
 
 
-def listar_por_categoria(categoria_id):
+def listar_por_categoria(categoria_id, incluir_inativos=False):
     return get_db().execute("""
         SELECT produtos.*, categorias.nome AS categoria_nome
         FROM produtos
         JOIN categorias ON produtos.categoria_id = categorias.id
         WHERE produtos.categoria_id = ?
+          AND (produtos.ativo OR ?)
         ORDER BY produtos.nome
-    """, (categoria_id,)).fetchall()
+    """, (categoria_id, bool(incluir_inativos))).fetchall()
 
 
 def quantidade_total():
@@ -128,6 +148,39 @@ def listar_ingredientes(produto_id):
         GROUP BY pi.produto_id, pi.ingrediente_id, pi.quantidade,
                  i.nome, i.unidade
         ORDER BY i.nome
+    """, (produto_id,)).fetchall()
+
+
+def listar_receita(produto_id):
+    """Ingredientes da receita (com a 1ª alternativa) para preencher o formulário."""
+    return get_db().execute("""
+        SELECT
+            pi.ingrediente_id,
+            pi.quantidade,
+            pia.ingrediente_alternativo_id AS alternativo_id,
+            pia.quantidade AS quantidade_alternativa
+        FROM produto_ingredientes AS pi
+        JOIN ingredientes AS i ON i.id = pi.ingrediente_id
+        LEFT JOIN produto_ingrediente_alternativas AS pia
+            ON pia.produto_id = pi.produto_id
+            AND pia.ingrediente_principal_id = pi.ingrediente_id
+        WHERE pi.produto_id = ?
+        ORDER BY i.nome
+    """, (produto_id,)).fetchall()
+
+
+def listar_alternativas(produto_id):
+    """Alternativas de cada ingrediente (para a página de detalhes)."""
+    return get_db().execute("""
+        SELECT
+            pia.ingrediente_principal_id,
+            ia.nome,
+            ia.unidade,
+            pia.quantidade
+        FROM produto_ingrediente_alternativas AS pia
+        JOIN ingredientes AS ia ON ia.id = pia.ingrediente_alternativo_id
+        WHERE pia.produto_id = ?
+        ORDER BY ia.nome
     """, (produto_id,)).fetchall()
 
 
@@ -207,6 +260,11 @@ def _salvar_relacoes(db, produto_id, ingredientes, chefs_ids):
         (produto_id,)
     )
 
+    categoria = db.execute(
+        "SELECT categoria_id FROM produtos WHERE id = ?",
+        (produto_id,)
+    ).fetchone()
+
     for chef_id in set(int(valor) for valor in chefs_ids):
         chef = db.execute("""
             SELECT id FROM usuarios
@@ -219,6 +277,14 @@ def _salvar_relacoes(db, produto_id, ingredientes, chefs_ids):
             INSERT INTO produto_chefs (produto_id, chef_id)
             VALUES (?, ?)
         """, (produto_id, chef_id))
+
+        # Quem faz o prato passa a constar como responsável pela categoria
+        # (se já tiver perfil), mantendo as duas listas coerentes.
+        db.execute("""
+            INSERT INTO perfis_categorias (perfil_id, categoria_id)
+            SELECT id, ? FROM perfis WHERE usuario_id = ?
+            ON CONFLICT DO NOTHING
+        """, (categoria["categoria_id"], chef_id))
 
 
 def criar_com_relacoes(nome, descricao, categoria_id, preco_centavos,

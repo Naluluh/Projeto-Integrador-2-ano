@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Minhas categorias · Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Minhas categorias</h1>
+        <p>
+            Escolha as categorias pelas quais você é responsável. Ao assumir
+            uma categoria, você passa a preparar os pratos dela; ao deixá-la,
+            deixa de aparecer para esses pratos. Os pedidos que você já
+            preparou continuam no seu histórico.
+        </p>
+    </div>
+</div>
+
+<div class="tabela-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Pratos</th>
+                <th>Situação</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for c in categorias %}
+            <tr>
+                <td>
+                    <img
+                        class="miniatura"
+                        src="{{ foto_src(c.foto_url, 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
+                        alt=""
+                    >
+                    <strong>{{ c.nome }}</strong>
+                </td>
+
+                <td>{{ c.total_produtos }}</td>
+
+                <td>
+                    {% if c.responsavel %}
+                        <span class="selo sucesso">Sou responsável</span>
+                    {% else %}
+                        <span class="selo">Não sou responsável</span>
+                    {% endif %}
+                </td>
+
+                <td class="acoes">
+                    {% if c.responsavel %}
+                        <form
+                            method="post"
+                            action="{{ url_for('perfil_chef.remover_categoria', categoria_id=c.id) }}"
+                            onsubmit="return confirm('Deixar de ser responsável por esta categoria? Você sairá dos pratos dela (o histórico de pedidos é mantido).')"
+                        >
+                            <button class="perigo link-button">Deixar categoria</button>
+                        </form>
+                    {% else %}
+                        <form
+                            method="post"
+                            action="{{ url_for('perfil_chef.adicionar_categoria', categoria_id=c.id) }}"
+                        >
+                            <button class="botao primario">Assumir categoria</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="vazio">Nenhuma categoria cadastrada.</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+<p>
+    <a href="{{ url_for('chefs.perfil', chef_id=session.get('usuario_id')) }}">
+        Ver meu perfil
+    </a>
+</p>
+
+{% endblock %}

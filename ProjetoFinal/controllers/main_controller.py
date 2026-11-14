@@ -78,3 +78,14 @@ def imagem(imagem_id):
     resposta.headers["X-Content-Type-Options"] = "nosniff"
 
     return resposta
+
+
+@main_bp.post("/sessao/ping")
+def sessao_ping():
+    """Chamada pelo JavaScript enquanto a pessoa usa a página.
+
+    O app.py já renova o horário da última atividade em toda requisição;
+    esta rota existe só para o navegador avisar "ainda estou aqui".
+    """
+
+    return "", 204

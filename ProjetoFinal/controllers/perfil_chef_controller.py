@@ -2,6 +2,7 @@
 
 from flask import (
     Blueprint,
+    abort,
     flash,
     redirect,
     render_template,
@@ -68,3 +69,88 @@ def cadastrar():
         "cadastrar_p_cozinheiro.html",
         categorias=pegar_categorias()
     )
+
+
+@perfil_bp.route("/editar", methods=("GET", "POST"))
+@cozinheiro_required
+def editar():
+    """O cozinheiro edita formação, biografia e experiência."""
+
+    usuario_id = session["usuario_id"]
+    perfil = perfil_model.buscar_perfil(usuario_id)
+
+    if perfil is None:
+        return redirect(url_for("perfil_chef.cadastrar"))
+
+    if request.method == "POST":
+        formacao = request.form.get("formacao", "").strip()
+        biografia = request.form.get("biografia", "").strip()
+        experiencia = request.form.get("experiencia", "").strip()
+
+        if not biografia:
+            flash("A biografia é obrigatória.", "erro")
+            return render_template("perfil_chef_editar.html", perfil=perfil)
+
+        perfil_model.atualizar_dados(
+            usuario_id, formacao, biografia, experiencia
+        )
+
+        flash("Perfil atualizado.", "sucesso")
+
+        return redirect(url_for("chefs.perfil", chef_id=usuario_id))
+
+    return render_template("perfil_chef_editar.html", perfil=perfil)
+
+
+@perfil_bp.get("/categorias")
+@cozinheiro_required
+def categorias():
+    """Todas as categorias, com a opção de assumir ou deixar cada uma."""
+
+    usuario_id = session["usuario_id"]
+
+    if perfil_model.perfil_id(usuario_id) is None:
+        flash("Cadastre seu perfil antes de escolher categorias.", "erro")
+        return redirect(url_for("perfil_chef.cadastrar"))
+
+    return render_template(
+        "perfil_chef_categorias.html",
+        categorias=perfil_model.categorias_com_status(usuario_id)
+    )
+
+
+@perfil_bp.post("/categorias/<int:categoria_id>/adicionar")
+@cozinheiro_required
+def adicionar_categoria(categoria_id):
+
+    try:
+        perfil_model.adicionar_categoria(session["usuario_id"], categoria_id)
+    except ValueError as erro:
+        flash(str(erro), "erro")
+        return redirect(url_for("perfil_chef.categorias"))
+
+    flash(
+        "Agora você é responsável por esta categoria e por seus pratos.",
+        "sucesso"
+    )
+
+    return redirect(url_for("perfil_chef.categorias"))
+
+
+@perfil_bp.post("/categorias/<int:categoria_id>/remover")
+@cozinheiro_required
+def remover_categoria(categoria_id):
+
+    try:
+        perfil_model.remover_categoria(session["usuario_id"], categoria_id)
+    except ValueError as erro:
+        flash(str(erro), "erro")
+        return redirect(url_for("perfil_chef.categorias"))
+
+    flash(
+        "Você deixou de ser responsável por esta categoria. "
+        "Os pedidos que você já preparou continuam no histórico.",
+        "sucesso"
+    )
+
+    return redirect(url_for("perfil_chef.categorias"))

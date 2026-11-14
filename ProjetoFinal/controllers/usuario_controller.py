@@ -18,7 +18,9 @@ from werkzeug.security import generate_password_hash
 
 from models import usuario_model as usuario_model
 from utils import administrador_required
+from utils import gerar_senha_temporaria
 from utils import salvar_imagem
+from utils import validar_nova_senha
 
 
 # Cria o Blueprint responsável pelas rotas de funcionários.
@@ -67,6 +69,11 @@ def novo():
             ""
         )
 
+        confirmacao = request.form.get(
+            "confirmar_senha",
+            ""
+        )
+
         cargo = request.form.get(
             "cargo",
             ""
@@ -81,16 +88,20 @@ def novo():
         }
 
         # Validação dos campos.
+        erro_senha = validar_nova_senha(senha, confirmacao)
+
         if (
             len(nome) < 2
             or len(nome_usuario) < 3
-            or len(senha) < 6
             or cargo not in cargos_permitidos
         ):
             flash(
                 "Preencha todos os campos corretamente.",
                 "erro"
             )
+
+        elif erro_senha:
+            flash(erro_senha, "erro")
 
         else:
 
@@ -187,6 +198,11 @@ def editar(usuario_id):
             ""
         )
 
+        confirmacao = request.form.get(
+            "confirmar_senha",
+            ""
+        )
+
         cargo = request.form.get(
             "cargo",
             ""
@@ -223,10 +239,10 @@ def editar(usuario_id):
                 # cria um novo hash.
                 if senha:
 
-                    if len(senha) < 6:
-                        raise ValueError(
-                            "A senha deve possuir pelo menos 6 caracteres."
-                        )
+                    erro_senha = validar_nova_senha(senha, confirmacao)
+
+                    if erro_senha:
+                        raise ValueError(erro_senha)
 
                     senha_hash = generate_password_hash(
                         senha
@@ -340,4 +356,41 @@ def excluir(usuario_id):
 
     return redirect(
         url_for("usuario.listar")
+    )
+
+
+@usuario_bp.post(
+    "/<int:usuario_id>/redefinir-senha"
+)
+@administrador_required
+def redefinir_senha(usuario_id):
+    """Gera uma senha temporária (atende "esqueci minha senha")."""
+
+    usuario = usuario_model.buscar(usuario_id)
+
+    if usuario is None:
+        abort(404)
+
+    if usuario_id == session.get("usuario_id"):
+        flash(
+            "Para trocar a sua própria senha use a opção Alterar senha.",
+            "erro"
+        )
+
+        return redirect(url_for("usuario.listar"))
+
+    senha_temporaria = gerar_senha_temporaria()
+
+    # A pessoa será obrigada a trocar a senha no próximo login.
+    usuario_model.atualizar_senha(
+        usuario_id,
+        generate_password_hash(senha_temporaria),
+        temporaria=True
+    )
+
+    # A senha é exibida só nesta resposta (não fica guardada em lugar nenhum).
+    return render_template(
+        "senha_temporaria.html",
+        usuario=usuario,
+        senha=senha_temporaria
     )

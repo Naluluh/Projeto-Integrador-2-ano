@@ -57,3 +57,14 @@ class Config:
 
     # Na Vercel o site é servido por HTTPS: o cookie só trafega criptografado.
     SESSION_COOKIE_SECURE = bool(os.environ.get("VERCEL"))
+
+    # Encerra a sessão após 30 minutos sem nenhuma atividade.
+    INATIVIDADE_SEGUNDOS = 30 * 60
+
+    # Proteção contra força bruta no login: após 15 tentativas erradas,
+    # a pessoa (e o IP) ficam 5 minutos sem poder tentar de novo.
+    LOGIN_MAX_TENTATIVAS = 15
+    LOGIN_BLOQUEIO_SEGUNDOS = 5 * 60
+
+    # Tentativas erradas só contam dentro desta janela de tempo.
+    LOGIN_JANELA_SEGUNDOS = 15 * 60

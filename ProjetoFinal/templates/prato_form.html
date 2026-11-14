@@ -209,6 +209,42 @@
 
         </div>
 
+        <!-- Ingrediente alternativo (opcional) -->
+        <div class="campo-alternativo" style="display: none;">
+
+            <label>
+                Ingrediente alternativo (opcional):
+
+                <select name="ingrediente_alternativo_id[]" class="select-alternativo">
+                    <option value="">Sem alternativa</option>
+
+                    {% for i in ingredientes %}
+                        <option value="{{ i.id }}">
+                            {{ i.nome }} ({{ i.unidade }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label>
+                Quantidade do alternativo por prato (opcional):
+
+                <input
+                    type="number"
+                    name="quantidade_alternativa[]"
+                    min="0.001"
+                    step="0.001"
+                    placeholder="Vazio = mesma quantidade"
+                >
+            </label>
+
+            <small>
+                Usado quando o estoque do ingrediente principal não cobre
+                todas as porções do pedido.
+            </small>
+
+        </div>
+
         <button type="button" class="remover-ingrediente">
             Remover ingrediente
         </button>
@@ -224,7 +260,7 @@
     <label for="chefs">Chefs Responsáveis:</label>
     <select id="chefs" name="chefs_ids" multiple required>
         {% for chef in cozinheiros %}
-        <option value="{{ chef.id }}">
+        <option value="{{ chef.id }}" {% if chef.id in chefs_ids %}selected{% endif %}>
             {{ chef.nome }}
         </option>
         {% endfor %}
@@ -238,46 +274,28 @@
 </form>
 
 <script>
-const listaIngredientes = document.getElementById(
-    "listaIngredientes"
-);
+const listaIngredientes = document.getElementById("listaIngredientes");
+const modeloIngrediente = document.getElementById("modeloIngrediente");
 
-const modeloIngrediente = document.getElementById(
-    "modeloIngrediente"
-);
+// Receita já cadastrada (vazia ao criar um prato novo).
+const receitaAtual = {{ receita|tojson }};
 
-// Adiciona uma linha de ingrediente.
+// Adiciona uma linha de ingrediente e devolve a linha criada.
 function adicionarIngrediente() {
 
     const modelo = modeloIngrediente.content.cloneNode(true);
-
     const linha = modelo.querySelector(".linha-ingrediente");
 
     const select = linha.querySelector(".select-ingrediente");
+    const campoQuantidade = linha.querySelector(".campo-quantidade");
+    const campoNovo = linha.querySelector(".campo-novo-ingrediente");
+    const campoAlt = linha.querySelector(".campo-alternativo");
 
-    const campoQuantidade = linha.querySelector(
-        ".campo-quantidade"
-    );
-
-    const campoNovo = linha.querySelector(
-        ".campo-novo-ingrediente"
-    );
-
-    const quantidade = linha.querySelector(
-        '[name="quantidade[]"]'
-    );
-
-    const nome = linha.querySelector(
-        '[name="novo_nome[]"]'
-    );
-
-    const unidade = linha.querySelector(
-        '[name="nova_unidade[]"]'
-    );
-
-    const estoque = linha.querySelector(
-        '[name="novo_estoque[]"]'
-    );
+    const quantidade = linha.querySelector('[name="quantidade[]"]');
+    const nome = linha.querySelector('[name="novo_nome[]"]');
+    const unidade = linha.querySelector('[name="nova_unidade[]"]');
+    const estoque = linha.querySelector('[name="novo_estoque[]"]');
+    const alternativo = linha.querySelector('[name="ingrediente_alternativo_id[]"]');
 
     // Verifica a escolha do ingrediente.
     select.addEventListener("change", function () {
@@ -285,38 +303,55 @@ function adicionarIngrediente() {
         const novo = this.value === "__novo__";
         const selecionado = this.value !== "";
 
-        campoQuantidade.style.display =
-            selecionado ? "block" : "none";
+        campoQuantidade.style.display = selecionado ? "block" : "none";
+        campoNovo.style.display = novo ? "block" : "none";
 
-        campoNovo.style.display =
-            novo ? "block" : "none";
+        // Alternativa só para ingrediente já cadastrado.
+        campoAlt.style.display = (selecionado && !novo) ? "block" : "none";
+
+        if (!selecionado || novo) {
+            alternativo.value = "";
+        }
 
         quantidade.required = selecionado;
-
         nome.required = novo;
         unidade.required = novo;
         estoque.required = novo;
     });
 
     // Remove a linha.
-    linha.querySelector(
-        ".remover-ingrediente"
-    ).addEventListener("click", function () {
-
+    linha.querySelector(".remover-ingrediente").addEventListener("click", function () {
         linha.remove();
-
     });
 
     listaIngredientes.appendChild(linha);
+    return linha;
 }
 
-// Botão de adicionar ingrediente.
-document.getElementById(
-    "adicionarIngrediente"
-).addEventListener("click", adicionarIngrediente);
+document.getElementById("adicionarIngrediente")
+    .addEventListener("click", adicionarIngrediente);
 
-// Começa com uma linha disponível.
-adicionarIngrediente();
+if (receitaAtual.length) {
+    // Edição: recria uma linha para cada ingrediente da receita.
+    receitaAtual.forEach(function (item) {
+        const linha = adicionarIngrediente();
+        const select = linha.querySelector(".select-ingrediente");
 
+        select.value = String(item.id);
+        select.dispatchEvent(new Event("change"));
+
+        linha.querySelector('[name="quantidade[]"]').value = item.quantidade;
+
+        if (item.alternativo_id) {
+            linha.querySelector('[name="ingrediente_alternativo_id[]"]').value =
+                String(item.alternativo_id);
+            linha.querySelector('[name="quantidade_alternativa[]"]').value =
+                item.quantidade_alternativa;
+        }
+    });
+} else {
+    // Cadastro: começa com uma linha disponível.
+    adicionarIngrediente();
+}
 </script>
 {% endblock %}

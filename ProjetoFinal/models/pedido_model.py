@@ -12,6 +12,12 @@ def listar():
     return db.execute("""
         SELECT
             p.*,
+            EXISTS (
+                SELECT 1
+                FROM itens_pedido_substituicoes AS s
+                INNER JOIN itens_pedido AS ip ON ip.id = s.item_pedido_id
+                WHERE ip.pedido_id = p.id
+            ) AS usou_alternativo,
             cliente.nome AS usuario_nome,
             chef.nome AS chef_nome
         FROM pedidos AS p
@@ -34,6 +40,12 @@ def listar_por_cliente(usuario_id):
     return db.execute("""
         SELECT
             p.*,
+            EXISTS (
+                SELECT 1
+                FROM itens_pedido_substituicoes AS s
+                INNER JOIN itens_pedido AS ip ON ip.id = s.item_pedido_id
+                WHERE ip.pedido_id = p.id
+            ) AS usou_alternativo,
             cliente.nome AS usuario_nome,
             chef.nome AS chef_nome
         FROM pedidos AS p
@@ -58,6 +70,12 @@ def listar_por_chef(chef_id):
     return db.execute("""
         SELECT
             p.*,
+            EXISTS (
+                SELECT 1
+                FROM itens_pedido_substituicoes AS s
+                INNER JOIN itens_pedido AS ip ON ip.id = s.item_pedido_id
+                WHERE ip.pedido_id = p.id
+            ) AS usou_alternativo,
             cliente.nome AS usuario_nome,
             chef.nome AS chef_nome
         FROM pedidos AS p
@@ -82,6 +100,12 @@ def buscar(pedido_id):
     return db.execute("""
         SELECT
             p.*,
+            EXISTS (
+                SELECT 1
+                FROM itens_pedido_substituicoes AS s
+                INNER JOIN itens_pedido AS ip ON ip.id = s.item_pedido_id
+                WHERE ip.pedido_id = p.id
+            ) AS usou_alternativo,
             cliente.nome AS usuario_nome,
             chef.nome AS chef_nome
         FROM pedidos AS p
@@ -173,17 +197,49 @@ def cancelar(pedido_id):
     db.commit()
 
 
+# Tolerância para comparações com números decimais (ex.: 0,1 + 0,2).
+_EPS = 1e-9
+
+
+def _quantos_cabem(estoque, por_porcao):
+    """Quantas porções inteiras o estoque permite preparar."""
+    return int((estoque + _EPS) // por_porcao)
+
+
+def _porcoes(n):
+    return f"{n} porção" if n == 1 else f"{n} porções"
+
+
 def _planejar_consumo(db, carrinho):
     """
-    Verifica os ingredientes necessários e escolhe
-    alternativas quando o estoque principal é insuficiente.
+    Verifica o estoque de cada ingrediente do carrinho e decide, porção por
+    porção, se usa o ingrediente padrão ou o alternativo.
 
-    Não altera o estoque. Apenas monta um plano de consumo.
+    Exemplo: 5 pratos pedidos, estoque padrão para 3 e alternativo para 2
+    -> 3 porções com o padrão e 2 com o alternativo, no mesmo pedido.
+
+    Não altera o estoque: apenas devolve o plano.
+
+    Retorna (itens, consumos):
+      itens     -> lista de {"produto", "quantidade", "substituicoes"}
+      consumos  -> {ingrediente_id: {"nome", "unidade", "quantidade"}}
     """
 
     itens = []
     estoques = {}
     consumos = {}
+
+    def estoque_virtual(ingrediente_id, valor_inicial):
+        # O estoque é "gasto" virtualmente, pois o carrinho pode ter vários
+        # pratos que usam o mesmo ingrediente.
+        return estoques.setdefault(ingrediente_id, float(valor_inicial))
+
+    def consumir(ingrediente_id, nome, unidade, quantidade):
+        estoques[ingrediente_id] -= quantidade
+        registro = consumos.setdefault(ingrediente_id, {
+            "nome": nome, "unidade": unidade, "quantidade": 0.0
+        })
+        registro["quantidade"] += quantidade
 
     for item in carrinho:
 
@@ -194,26 +250,28 @@ def _planejar_consumo(db, carrinho):
             raise ValueError("Quantidade de pratos inválida.")
 
         produto = db.execute("""
-            SELECT *
-            FROM produtos
-            WHERE id = ?
+            SELECT * FROM produtos WHERE id = ?
         """, (produto_id,)).fetchone()
 
         if produto is None:
             raise ValueError("Um prato do pedido não existe mais.")
+
+        if not produto["ativo"]:
+            raise ValueError(
+                f"{produto['nome']} está indisponível no momento."
+            )
 
         ingredientes = db.execute("""
             SELECT
                 pi.ingrediente_id,
                 pi.quantidade,
                 i.nome,
+                i.unidade,
                 i.estoque
             FROM produto_ingredientes AS pi
-
-            INNER JOIN ingredientes AS i
-                ON i.id = pi.ingrediente_id
-
+            INNER JOIN ingredientes AS i ON i.id = pi.ingrediente_id
             WHERE pi.produto_id = ?
+            ORDER BY i.nome
         """, (produto_id,)).fetchall()
 
         if not ingredientes:
@@ -221,106 +279,153 @@ def _planejar_consumo(db, carrinho):
                 f"O prato {produto['nome']} não possui ingredientes cadastrados."
             )
 
-        for ingrediente in ingredientes:
+        # Alternativas do prato, agrupadas pelo ingrediente principal.
+        alternativas = {}
 
-            principal_id = ingrediente["ingrediente_id"]
+        for alt in db.execute("""
+            SELECT
+                pa.ingrediente_principal_id,
+                pa.ingrediente_alternativo_id,
+                pa.quantidade,
+                i.nome,
+                i.unidade,
+                i.estoque
+            FROM produto_ingrediente_alternativas AS pa
+            INNER JOIN ingredientes AS i ON i.id = pa.ingrediente_alternativo_id
+            WHERE pa.produto_id = ?
+            ORDER BY i.nome
+        """, (produto_id,)).fetchall():
+            alternativas.setdefault(
+                alt["ingrediente_principal_id"], []
+            ).append(alt)
 
-            necessario = (
-                ingrediente["quantidade"] * quantidade_pratos
+        substituicoes = []
+
+        for ing in ingredientes:
+
+            principal_id = ing["ingrediente_id"]
+            restantes = quantidade_pratos
+
+            # 1) Usa o ingrediente padrão enquanto o estoque permitir.
+            disponivel_padrao = estoque_virtual(principal_id, ing["estoque"])
+            com_padrao = min(
+                restantes,
+                _quantos_cabem(disponivel_padrao, ing["quantidade"])
             )
 
-            estoque_atual = estoques.setdefault(
-                principal_id,
-                float(ingrediente["estoque"])
-            )
+            if com_padrao > 0:
+                consumir(
+                    principal_id, ing["nome"], ing["unidade"],
+                    com_padrao * ing["quantidade"]
+                )
+                restantes -= com_padrao
 
-            ingrediente_escolhido = None
-            quantidade_consumida = necessario
+            # 2) O que faltou é feito com o(s) ingrediente(s) alternativo(s).
+            for alt in alternativas.get(principal_id, []):
 
-            # Tenta utilizar primeiro o ingrediente principal.
-            if estoque_atual >= necessario:
+                if restantes == 0:
+                    break
 
-                ingrediente_escolhido = {
-                    "id": principal_id,
-                    "nome": ingrediente["nome"]
-                }
-
-            else:
-
-                # Procura ingredientes alternativos.
-                alternativas = db.execute("""
-                    SELECT
-                        pa.ingrediente_alternativo_id,
-                        pa.quantidade,
-                        i.nome,
-                        i.estoque
-                    FROM produto_ingrediente_alternativas AS pa
-
-                    INNER JOIN ingredientes AS i
-                        ON i.id = pa.ingrediente_alternativo_id
-
-                    WHERE pa.produto_id = ?
-                    AND pa.ingrediente_principal_id = ?
-
-                    ORDER BY i.nome
-                """, (
-                    produto_id,
-                    principal_id
-                )).fetchall()
-
-                for alternativa in alternativas:
-
-                    alternativa_id = (
-                        alternativa["ingrediente_alternativo_id"]
-                    )
-
-                    necessario_alternativo = (
-                        alternativa["quantidade"] * quantidade_pratos
-                    )
-
-                    estoque_alternativo = estoques.setdefault(
-                        alternativa_id,
-                        float(alternativa["estoque"])
-                    )
-
-                    if estoque_alternativo >= necessario_alternativo:
-
-                        ingrediente_escolhido = {
-                            "id": alternativa_id,
-                            "nome": alternativa["nome"]
-                        }
-
-                        quantidade_consumida = necessario_alternativo
-                        break
-
-            if ingrediente_escolhido is None:
-
-                raise ValueError(
-                    f"{produto['nome']} está indisponível: "
-                    f"faltam {ingrediente['nome']} "
-                    "e não há alternativa suficiente."
+                alt_id = alt["ingrediente_alternativo_id"]
+                disponivel_alt = estoque_virtual(alt_id, alt["estoque"])
+                com_alt = min(
+                    restantes,
+                    _quantos_cabem(disponivel_alt, alt["quantidade"])
                 )
 
-            ingrediente_id = ingrediente_escolhido["id"]
+                if com_alt > 0:
+                    quantidade_alt = com_alt * alt["quantidade"]
+                    consumir(alt_id, alt["nome"], alt["unidade"], quantidade_alt)
+                    restantes -= com_alt
 
-            # Atualiza o estoque virtual.
-            estoques[ingrediente_id] -= quantidade_consumida
+                    substituicoes.append({
+                        "original": ing["nome"],
+                        "alternativo": alt["nome"],
+                        "unidade": alt["unidade"],
+                        "porcoes": com_alt,
+                        "quantidade": quantidade_alt
+                    })
 
-            # Agrupa o consumo por ingrediente.
-            if ingrediente_id not in consumos:
+            # 3) Se ainda sobrou porção sem ingrediente, o prato não sai.
+            if restantes > 0:
+                possiveis = quantidade_pratos - restantes
 
-                consumos[ingrediente_id] = {
-                    "nome": ingrediente_escolhido["nome"],
-                    "quantidade": 0
-                }
+                if possiveis == 0:
+                    raise ValueError(
+                        f"{produto['nome']} está indisponível: faltam "
+                        f"{ing['nome']} e não há alternativa suficiente."
+                    )
 
-            consumos[ingrediente_id]["quantidade"] += (
-                quantidade_consumida
-            )
+                raise ValueError(
+                    f"Estoque insuficiente para {_porcoes(quantidade_pratos)} "
+                    f"de {produto['nome']}: faltam {ing['nome']} e não há "
+                    f"alternativa suficiente. No momento só é possível "
+                    f"preparar {_porcoes(possiveis)}."
+                )
 
-        itens.append((produto, quantidade_pratos))
+        itens.append({
+            "produto": produto,
+            "quantidade": quantidade_pratos,
+            "substituicoes": substituicoes
+        })
 
     return itens, consumos
+
+
+def planejar(carrinho):
+    """Planeja o consumo do carrinho (sem alterar o estoque)."""
+
+    return _planejar_consumo(get_db(), carrinho)
+
+
+def mensagens_substituicao(item_plano):
+    """Textos explicando quais porções usarão ingrediente alternativo."""
+
+    total = item_plano["quantidade"]
+    nome = item_plano["produto"]["nome"]
+    por_original = {}
+
+    for sub in item_plano["substituicoes"]:
+        por_original.setdefault(sub["original"], []).append(sub)
+
+    mensagens = []
+
+    for original, subs in por_original.items():
+        com_alt = sum(sub["porcoes"] for sub in subs)
+        padrao = total - com_alt
+        nomes = " e ".join(sub["alternativo"] for sub in subs)
+
+        if padrao == 0:
+            mensagens.append(
+                f"{nome}: sem estoque de {original}, as {_porcoes(com_alt)} "
+                f"serão feitas com {nomes} (ingrediente alternativo)."
+            )
+        else:
+            mensagens.append(
+                f"{nome}: {_porcoes(padrao)} com {original} (padrão) e "
+                f"{_porcoes(com_alt)} com {nomes} no lugar de {original}, "
+                f"pois o estoque do ingrediente padrão não cobre todas."
+            )
+
+    return mensagens
+
+
+def ids_ativos(ids):
+    """Dos ids informados, devolve os pratos que ainda estão disponíveis."""
+
+    ids = [int(i) for i in ids]
+
+    if not ids:
+        return set()
+
+    marcadores = ",".join("?" for _ in ids)
+
+    linhas = get_db().execute(
+        f"SELECT id FROM produtos WHERE ativo AND id IN ({marcadores})",
+        tuple(ids)
+    ).fetchall()
+
+    return {linha["id"] for linha in linhas}
 
 
 def disponivel(produto_id, quantidade=1):
@@ -345,14 +450,16 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
     """
     Registra o pedido com o cozinheiro e o endereço selecionados
     e desconta os ingredientes em uma única transação.
+
+    Devolve (pedido_id, avisos), onde avisos explica o uso de
+    ingredientes alternativos (lista de textos).
     """
 
     db = get_db()
 
     try:
         # No PostgreSQL a transação já é aberta automaticamente na primeira
-        # consulta e termina no commit/rollback (o "BEGIN IMMEDIATE" é do
-        # SQLite e causa erro de sintaxe aqui).
+        # consulta e termina no commit/rollback.
 
         # 1. Valida o cozinheiro.
         chef = db.execute("""
@@ -394,13 +501,14 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
                     f"o produto {item['nome']}."
                 )
 
-        # 5. Planeja o consumo (não altera o estoque ainda).
+        # 5. Planeja o consumo (não altera o estoque ainda). Aqui também é
+        #    verificado se algum prato ficou indisponível.
         itens, consumos = _planejar_consumo(db, carrinho)
 
         # 6. Calcula o total ANTES de usá-lo no INSERT.
         total = sum(
-            produto["preco_centavos"] * quantidade
-            for produto, quantidade in itens
+            i["produto"]["preco_centavos"] * i["quantidade"]
+            for i in itens
         )
 
         # 7. Registra o pedido.
@@ -413,13 +521,17 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
                 total_centavos
             )
             VALUES (?, ?, ?, ?, ?)
-        """, (usuario_id, endereco_id, chef_id, "em preparo", total))
+        """, (usuario_id, endereco_id, chef_id, "espera", total))
 
         pedido_id = cursor.lastrowid
 
-        # 8. Registra os itens.
-        for produto, quantidade in itens:
-            db.execute("""
+        # 8. Registra os itens e as porções feitas com ingrediente alternativo.
+        avisos = []
+
+        for i in itens:
+            produto = i["produto"]
+
+            cursor = db.execute("""
                 INSERT INTO itens_pedido (
                     pedido_id,
                     produto_id,
@@ -434,17 +546,45 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
                 produto["id"],
                 produto["nome"],
                 produto["preco_centavos"],
-                quantidade,
-                produto["preco_centavos"] * quantidade
+                i["quantidade"],
+                produto["preco_centavos"] * i["quantidade"]
             ))
+
+            item_id = cursor.lastrowid
+
+            for sub in i["substituicoes"]:
+                db.execute("""
+                    INSERT INTO itens_pedido_substituicoes (
+                        item_pedido_id,
+                        ingrediente_original,
+                        ingrediente_alternativo,
+                        unidade,
+                        porcoes,
+                        quantidade
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    item_id,
+                    sub["original"],
+                    sub["alternativo"],
+                    sub["unidade"],
+                    sub["porcoes"],
+                    sub["quantidade"]
+                ))
+
+            avisos.extend(mensagens_substituicao(i))
 
         # 9. Desconta os ingredientes.
         for ingrediente_id, dados in consumos.items():
             cursor = db.execute("""
                 UPDATE ingredientes
-                SET estoque = estoque - ?
-                WHERE id = ? AND estoque >= ?
+                SET estoque = CASE
+                    WHEN estoque - ? < 0 THEN 0
+                    ELSE estoque - ?
+                END
+                WHERE id = ? AND estoque + 0.000001 >= ?
             """, (
+                dados["quantidade"],
                 dados["quantidade"],
                 ingrediente_id,
                 dados["quantidade"]
@@ -456,11 +596,59 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
                 )
 
         db.commit()
-        return pedido_id
+        return pedido_id, avisos
 
     except Exception:
         db.rollback()
         raise
+
+
+def substituicoes_por_item(pedido_id):
+    """Ingredientes alternativos usados em cada item do pedido.
+
+    Devolve {item_id: [ {original, alternativas, com_alternativo,
+    com_padrao, quantidade_total} ]} para exibir nos detalhes.
+    """
+
+    linhas = get_db().execute("""
+        SELECT s.*, ip.quantidade AS quantidade_item
+        FROM itens_pedido_substituicoes AS s
+        INNER JOIN itens_pedido AS ip ON ip.id = s.item_pedido_id
+        WHERE ip.pedido_id = ?
+        ORDER BY s.id
+    """, (pedido_id,)).fetchall()
+
+    resultado = {}
+
+    for linha in linhas:
+        grupos = resultado.setdefault(linha["item_pedido_id"], {})
+        grupo = grupos.setdefault(linha["ingrediente_original"], {
+            "original": linha["ingrediente_original"],
+            "alternativas": [],
+            "com_alternativo": 0,
+            "quantidade_item": linha["quantidade_item"]
+        })
+
+        grupo["alternativas"].append({
+            "nome": linha["ingrediente_alternativo"],
+            "porcoes": linha["porcoes"],
+            "quantidade": linha["quantidade"],
+            "unidade": linha["unidade"]
+        })
+        grupo["com_alternativo"] += linha["porcoes"]
+
+    final = {}
+
+    for item_id, grupos in resultado.items():
+        final[item_id] = []
+
+        for grupo in grupos.values():
+            grupo["com_padrao"] = (
+                grupo["quantidade_item"] - grupo["com_alternativo"]
+            )
+            final[item_id].append(grupo)
+
+    return final
 
 
 def quantidade_total():

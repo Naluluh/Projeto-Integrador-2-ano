@@ -25,7 +25,12 @@
 
 </head>
 
-<body>
+<body
+    {% if session.get('usuario_id') %}
+        data-logado="1"
+        data-inatividade="{{ inatividade_segundos }}"
+    {% endif %}
+>
 
 <header class="topo">
 
@@ -74,6 +79,20 @@
             Categorias
         </a>
 
+        <a href="{{ url_for('chefs.listar') }}">
+            Cozinheiros
+        </a>
+
+        {% if session.get('cargo') == 'cozinheiro' %}
+            <a href="{{ url_for('chefs.perfil', chef_id=session.get('usuario_id')) }}">
+                Meu perfil
+            </a>
+
+            <a href="{{ url_for('perfil_chef.categorias') }}">
+                Minhas categorias
+            </a>
+        {% endif %}
+
 
         <!-- Pedidos -->
         <a href="{{ url_for('pedido.listar') }}">
@@ -110,6 +129,10 @@
 
         {% endif %}
 
+
+        <a href="{{ url_for('auth.alterar_senha') }}">
+            Alterar senha
+        </a>
 
         <!-- =================================================
              INFORMAÇÕES DO USUÁRIO
@@ -166,7 +189,13 @@
                 class="alerta {{ categoria }}"
                 role="alert"
             >
-                {{ mensagem }}
+                <span>{{ mensagem }}</span>
+
+                <button
+                    type="button"
+                    class="fechar-alerta"
+                    aria-label="Fechar mensagem"
+                >&times;</button>
             </div>
 
         {% endfor %}

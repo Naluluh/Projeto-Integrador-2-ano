@@ -84,6 +84,12 @@ Pedidos
                         <span class="status-pedido">
                             {{ p.status }}
                         </span>
+
+                        {% if p.usou_alternativo %}
+                            <span class="selo aviso" title="Parte do pedido usou ingrediente alternativo">
+                                ingrediente alternativo
+                            </span>
+                        {% endif %}
                     </td>
 
                     <td>

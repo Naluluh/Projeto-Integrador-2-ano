@@ -1,10 +1,12 @@
 """Funções pequenas compartilhadas entre Controllers e Views."""
 
 import re
+import secrets
+import string
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from flask import url_for
+from flask import request, url_for
 
 # Brasília (UTC-3). O Brasil não adota mais horário de verão.
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
@@ -146,6 +148,100 @@ from flask import (
     session,
     url_for
 )
+
+
+
+# ---------------------------------------------------------------------------
+# Regras de senha
+# ---------------------------------------------------------------------------
+
+SENHA_MIN = 8
+SENHA_MAX = 32
+
+# Mesma regra mostrada na tela (ver static/js/script.js e _macros.html).
+SENHA_REGRAS_TEXTO = (
+    "A senha deve ter de 8 a 32 caracteres, com pelo menos uma letra "
+    "minúscula, uma maiúscula, um número e um símbolo especial "
+    "(! @ # $ % & * etc.), sem espaços."
+)
+
+
+def validar_senha(senha):
+    """Devolve None se a senha é válida, ou o texto do erro."""
+
+    if not (SENHA_MIN <= len(senha) <= SENHA_MAX):
+        return f"A senha deve ter entre {SENHA_MIN} e {SENHA_MAX} caracteres."
+
+    if any(c.isspace() for c in senha):
+        return "A senha não pode conter espaços."
+
+    if not any(c in string.ascii_lowercase for c in senha):
+        return "A senha precisa de pelo menos uma letra minúscula."
+
+    if not any(c in string.ascii_uppercase for c in senha):
+        return "A senha precisa de pelo menos uma letra maiúscula."
+
+    if not any(c in string.digits for c in senha):
+        return "A senha precisa de pelo menos um número."
+
+    if not any(c in string.punctuation for c in senha):
+        return "A senha precisa de pelo menos um símbolo especial (ex.: ! @ # $ %)."
+
+    return None
+
+
+def validar_nova_senha(senha, confirmacao):
+    """Valida a senha e a confirmação. Devolve None ou o texto do erro."""
+
+    erro = validar_senha(senha)
+
+    if erro:
+        return erro
+
+    # As senhas são comparadas em texto puro (antes do hash). Os hashes do
+    # Werkzeug usam "sal" aleatório, então dois hashes da mesma senha nunca
+    # são iguais: comparar hashes não funcionaria.
+    if not secrets.compare_digest(
+        senha.encode("utf-8"),
+        confirmacao.encode("utf-8")
+    ):
+        return "A confirmação de senha não confere com a senha digitada."
+
+    return None
+
+
+def gerar_senha_temporaria(tamanho=12):
+    """Gera uma senha aleatória que já cumpre as regras de senha."""
+
+    sorteio = secrets.SystemRandom()
+
+    # Evita símbolos fáceis de confundir ao ditar a senha.
+    simbolos = "!@#$%&*?"
+
+    senha = [
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.digits),
+        secrets.choice(simbolos),
+    ]
+
+    todos = string.ascii_letters + string.digits + simbolos
+    senha += [secrets.choice(todos) for _ in range(tamanho - len(senha))]
+
+    sorteio.shuffle(senha)
+
+    return "".join(senha)
+
+
+def ip_cliente():
+    """IP de quem fez a requisição (a Vercel envia em X-Forwarded-For)."""
+
+    encaminhado = request.headers.get("X-Forwarded-For", "")
+
+    if encaminhado:
+        return encaminhado.split(",")[0].strip()[:64]
+
+    return (request.remote_addr or "desconhecido")[:64]
 
 
 def login_required(funcao):

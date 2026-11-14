@@ -1,14 +1,18 @@
+"""Cozinheiros: lista, perfil público e escolha do cozinheiro do pedido."""
 
 from flask import (
     Blueprint,
-    render_template,
-    session,
+    abort,
     flash,
     redirect,
+    render_template,
+    session,
     url_for
 )
 
+from controllers import carrinho as carrinho_service
 from models import chefs_model
+from models import prato_model
 from models.categorias_model import nome_categoria
 
 
@@ -19,9 +23,53 @@ chefs_bp = Blueprint(
 )
 
 
+def _e_administrador():
+    return session.get("cargo") == "administrador"
+
+
+# Lista de todos os cozinheiros (aba "Cozinheiros").
+@chefs_bp.get("/")
+def listar():
+
+    chefs = chefs_model.listar_cozinheiros(
+        incluir_inativos=_e_administrador()
+    )
+
+    return render_template("chefs_lista.html", chefs=chefs)
+
+
+# Perfil de um cozinheiro: cadastro, categorias e pratos pelos quais responde.
+@chefs_bp.get("/<int:chef_id>")
+def perfil(chef_id):
+
+    chef = chefs_model.buscar_cozinheiro(chef_id)
+
+    if chef is None:
+        abort(404)
+
+    return render_template(
+        "chef_perfil.html",
+        chef=chef,
+        categorias=chefs_model.categorias_do_chef(chef_id),
+        produtos=chefs_model.produtos_do_chef(
+            chef_id,
+            incluir_inativos=_e_administrador()
+        ),
+        e_proprio=(session.get("usuario_id") == chef_id)
+    )
+
+
 # Buscar cozinheiros relacionados a um produto.
 @chefs_bp.route("/prato/<int:id_p>")
 def por_prato(id_p):
+
+    produto = prato_model.buscar(id_p)
+
+    # Prato oculto só é visto pelo administrador.
+    if produto is None or (
+        not produto["ativo"] and not _e_administrador()
+    ):
+        abort(404)
 
     chefs = chefs_model.chefs_produto(id_p)
 
@@ -29,7 +77,9 @@ def por_prato(id_p):
         "chefs_esp.html",
         chefs=chefs,
         origem="prato",
-        id_p=id_p
+        id_p=id_p,
+        produto=produto,
+        pedido_pendente=session.get("pedido_pendente")
     )
 
 
@@ -66,16 +116,14 @@ def selecionar_categoria(categoria_id, chef_id):
             url_for("chefs.por_categoria", categoria_id=categoria_id)
         )
 
-    # Guarda o cozinheiro escolhido.
-    session["chef_id"] = chef_id
-
-    # Guarda a categoria escolhida.
-    session["categoria_id"] = categoria_id
+    # Guarda o cozinheiro e a categoria escolhidos.
+    carrinho_service.definir_chef(chef_id, categoria_id=categoria_id)
 
     # Busca os produtos que esse cozinheiro prepara.
     produtos = chefs_model.produtos_chef_categoria(
         chef_id,
-        categoria_id
+        categoria_id,
+        incluir_inativos=_e_administrador()
     )
 
     return render_template(
@@ -92,6 +140,14 @@ def selecionar_categoria(categoria_id, chef_id):
 )
 def selecionar_prato(id_p, chef_id):
 
+    produto = prato_model.buscar(id_p)
+
+    if produto is None or (
+        not produto["ativo"] and not _e_administrador()
+    ):
+        flash("Produto não encontrado.", "erro")
+        return redirect(url_for("categorias.main"))
+
     if not chefs_model.verificar_chef_produto(
         chef_id,
         id_p
@@ -105,26 +161,35 @@ def selecionar_prato(id_p, chef_id):
             url_for("chefs.por_prato", id_p=id_p)
         )
 
-    categoria_id = chefs_model.categoria_por_produto(id_p)
+    categoria_id = produto["categoria_id"]
 
-    if categoria_id is None:
-        flash(
-            "Produto não encontrado.",
-            "erro"
+    # Guarda o cozinheiro, a categoria e o produto escolhidos.
+    carrinho_service.definir_chef(
+        chef_id,
+        categoria_id=categoria_id,
+        produto_id=id_p
+    )
+
+    # A pessoa tentou adicionar este prato antes de escolher o cozinheiro:
+    # agora o prato entra no carrinho e ela segue para o pedido.
+    pendente = session.pop("pedido_pendente", None)
+
+    if (
+        pendente
+        and pendente.get("produto_id") == id_p
+        and session.get("cargo") in {"cliente", "administrador"}
+    ):
+        carrinho_service.incluir_no_carrinho(
+            produto,
+            int(pendente["quantidade"])
         )
 
-        return redirect(
-            url_for("categorias.main")
-        )
-
-    # Guarda o cozinheiro e o produto escolhidos.
-    session["chef_id"] = chef_id
-    session["categoria_id"] = categoria_id
-    session["produto_id"] = id_p
+        return redirect(url_for("pedido.novo"))
 
     produtos = chefs_model.produtos_chef_categoria(
         chef_id,
-        categoria_id
+        categoria_id,
+        incluir_inativos=_e_administrador()
     )
 
     return render_template(

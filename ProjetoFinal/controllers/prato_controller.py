@@ -1,17 +1,20 @@
 """CRUD, cadastro de receitas e exportação de produtos."""
 
+import math
 from io import BytesIO
 
 from psycopg import IntegrityError
 from flask import (
     Blueprint, abort, flash, redirect, render_template,
-    request, send_file, url_for
+    request, send_file, session, url_for
 )
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
 from database import get_db
-from models import categorias_model, prato_model, usuario_model, pedido_model
+from models import (
+    categorias_model, chefs_model, prato_model, usuario_model, pedido_model
+)
 from utils import (
     moeda_para_centavos, administrador_required, gestor_required,
     salvar_imagem
@@ -21,7 +24,34 @@ from utils import (
 prato_bp = Blueprint("prato", __name__, url_prefix="/cardapio")
 
 
+def _e_administrador():
+    return session.get("cargo") == "administrador"
+
+
+def _prato_visivel_para_pessoa(prato):
+    """Prato oculto (indisponível) só pode ser visto pelo administrador."""
+    return prato is not None and (prato["ativo"] or _e_administrador())
+
+
 def _carregar_formulario(prato=None):
+    receita = []
+    chefs_ids = []
+
+    if prato:
+        receita = [
+            {
+                "id": linha["ingrediente_id"],
+                "quantidade": linha["quantidade"],
+                "alternativo_id": linha["alternativo_id"],
+                "quantidade_alternativa": linha["quantidade_alternativa"]
+            }
+            for linha in prato_model.listar_receita(prato["id"])
+        ]
+        chefs_ids = [
+            linha["chef_id"]
+            for linha in prato_model.listar_chefs_produto(prato["id"])
+        ]
+
     return render_template(
         "prato_form.html",
         prato=prato,
@@ -32,14 +62,8 @@ def _carregar_formulario(prato=None):
             FROM ingredientes
             ORDER BY nome
         """).fetchall(),
-        ingredientes_produto=(
-            prato_model.listar_ingredientes(prato["id"])
-            if prato else []
-        ),
-        chefs_produto=(
-            prato_model.listar_chefs_produto(prato["id"])
-            if prato else []
-        )
+        receita=receita,
+        chefs_ids=chefs_ids
     )
 
 
@@ -55,11 +79,17 @@ def categorias():
 
 @prato_bp.route("/categoria/<int:categoria_id>")
 def catalogo_categoria(categoria_id):
-    pratos = prato_model.listar_por_categoria(categoria_id)
+    # Pratos marcados como indisponíveis só aparecem para o administrador.
+    pratos = prato_model.listar_por_categoria(
+        categoria_id,
+        incluir_inativos=_e_administrador()
+    )
     pratos = [
         {
             **dict(prato),
-            "disponivel": pedido_model.disponivel(prato["id"])
+            "disponivel": (
+                prato["ativo"] and pedido_model.disponivel(prato["id"])
+            )
         }
         for prato in pratos
     ]
@@ -74,13 +104,55 @@ def catalogo_categoria(categoria_id):
 @prato_bp.route("/detalhes/<int:prato_id>")
 def detalhes(prato_id):
     prato = prato_model.buscar(prato_id)
-    if prato is None:
+    if not _prato_visivel_para_pessoa(prato):
         abort(404)
+
+    # Alternativas agrupadas pelo ingrediente principal.
+    alternativas = {}
+    for alt in prato_model.listar_alternativas(prato_id):
+        alternativas.setdefault(
+            alt["ingrediente_principal_id"], []
+        ).append(alt)
+
     return render_template(
         "prato_detalhes.html",
         prato=prato,
-        ingredientes=prato_model.listar_ingredientes(prato_id)
+        ingredientes=prato_model.listar_ingredientes(prato_id),
+        alternativas=alternativas,
+        chefs=chefs_model.chefs_produto(prato_id)
     )
+
+
+@prato_bp.post("/<int:prato_id>/visibilidade")
+@administrador_required
+def alterar_visibilidade(prato_id):
+    """Deixa o prato disponível (visível) ou indisponível (oculto).
+
+    Os pedidos anteriores não são afetados: eles guardam o nome e o preço
+    do prato no momento da compra.
+    """
+    prato = prato_model.buscar(prato_id)
+    if prato is None:
+        abort(404)
+
+    ativo = request.form.get("ativo") == "1"
+    prato_model.definir_ativo(prato_id, ativo)
+
+    if ativo:
+        flash(f"{prato['nome']} agora está disponível para todos.", "sucesso")
+    else:
+        flash(
+            f"{prato['nome']} ficou indisponível e está oculto para os "
+            "outros usuários. Os pedidos antigos continuam no histórico.",
+            "sucesso"
+        )
+
+    # Volta para a página de onde veio (somente caminhos internos).
+    destino = request.form.get("proxima", "")
+    if not destino.startswith("/") or destino.startswith("//") or "\\" in destino:
+        destino = url_for("prato.detalhes", prato_id=prato_id)
+
+    return redirect(destino)
 
 
 def _dados_formulario():
@@ -100,6 +172,17 @@ def _dados_formulario():
             raise ValueError("Selecione uma categoria válida.")
 
     return nome, descricao, categoria, preco, modo_preparo
+
+
+def _numero(texto, mensagem):
+    """Converte para número finito (rejeita 'nan' e 'inf')."""
+    try:
+        valor = float(texto)
+    except (ValueError, TypeError):
+        raise ValueError(mensagem)
+    if not math.isfinite(valor):
+        raise ValueError(mensagem)
+    return valor
 
 
 def _dados_ingredientes():
@@ -122,10 +205,10 @@ def _dados_ingredientes():
     ids_utilizados = set()
 
     for i, ingrediente_id in enumerate(ids):
-        try:
-            quantidade = float(quantidades[i])
-        except (ValueError, IndexError):
-            raise ValueError("Informe uma quantidade válida para cada ingrediente.")
+        quantidade = _numero(
+            valor_da_linha(quantidades, i),
+            "Informe uma quantidade válida para cada ingrediente."
+        )
 
         if quantidade <= 0:
             raise ValueError("A quantidade deve ser maior que zero.")
@@ -135,10 +218,13 @@ def _dados_ingredientes():
         quantidade_alt = None
 
         if alternativo_id:
-            try:
-                quantidade_alt = float(quantidade_alt_texto) if quantidade_alt_texto else quantidade
-            except ValueError:
-                raise ValueError("Informe uma quantidade válida para o ingrediente alternativo.")
+            quantidade_alt = (
+                _numero(
+                    quantidade_alt_texto,
+                    "Informe uma quantidade válida para o ingrediente alternativo."
+                )
+                if quantidade_alt_texto else quantidade
+            )
             if quantidade_alt <= 0:
                 raise ValueError("A quantidade alternativa deve ser maior que zero.")
 
@@ -146,10 +232,10 @@ def _dados_ingredientes():
             nome = valor_da_linha(nomes, i).strip()
             unidade = valor_da_linha(unidades, i).strip()
             estoque_texto = valor_da_linha(estoques, i).strip()
-            try:
-                estoque = float(estoque_texto)
-            except ValueError:
-                raise ValueError("Informe o estoque inicial do novo ingrediente.")
+            estoque = _numero(
+                estoque_texto,
+                "Informe o estoque inicial do novo ingrediente."
+            )
 
             if not nome or not unidade or estoque < 0:
                 raise ValueError("Preencha nome, unidade e estoque do novo ingrediente.")
@@ -208,7 +294,9 @@ def listar():
     busca = request.args.get("busca", "")
     return render_template(
         "pratos.html",
-        produtos=prato_model.listar(busca),
+        produtos=prato_model.listar(
+            busca, incluir_inativos=_e_administrador()
+        ),
         busca=busca
     )
 
@@ -251,7 +339,7 @@ def novo():
 @gestor_required
 def editar(prato_id):
     prato = prato_model.buscar(prato_id)
-    if prato is None:
+    if not _prato_visivel_para_pessoa(prato):
         abort(404)
 
     if request.method == "POST":
@@ -311,20 +399,21 @@ def exportar():
     ws.title = "produtos"
     ws.append([
         "Código", "Nome", "Descrição", "Categoria",
-        "Preço (R$)", "Modo de preparo"
+        "Preço (R$)", "Modo de preparo", "Situação"
     ])
 
     for cell in ws[1]:
         cell.font = Font(bold=True)
 
-    for produto in prato_model.listar():
+    for produto in prato_model.listar(incluir_inativos=_e_administrador()):
         ws.append([
             produto["id"],
             produto["nome"],
             produto["descricao"],
             produto["categoria_nome"],
             produto["preco_centavos"] / 100,
-            produto["modo_preparo"]
+            produto["modo_preparo"],
+            "Disponível" if produto["ativo"] else "Indisponível"
         ])
 
     ws.column_dimensions["B"].width = 25

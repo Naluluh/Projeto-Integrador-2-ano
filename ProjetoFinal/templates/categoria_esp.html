@@ -42,11 +42,16 @@
                 >
             </button>
 
-            <h2>{{ t['nome'] }}</h2>
+            <h2>
+                {{ t['nome'] }}
+                {% if not t['ativo'] %}
+                    <span class="selo aviso">Indisponível (oculto)</span>
+                {% endif %}
+            </h2>
 
             {% if chef_selecionado %}
 
-                {% if session.get('cargo') in ['cliente', 'administrador'] %}
+                {% if session.get('cargo') in ['cliente', 'administrador'] and t['ativo'] %}
 
                     <form
                         method="POST"

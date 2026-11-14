@@ -68,6 +68,26 @@ Detalhes do pedido
                     {{ item.subtotal_centavos|moeda }}
                 </p>
 
+                {# Porções preparadas com ingrediente alternativo. #}
+                {% for sub in substituicoes.get(item.id, []) %}
+                    <p class="aviso-alt">
+                        <strong>Ingrediente alternativo:</strong>
+                        {% if sub.com_padrao > 0 %}
+                            {{ sub.com_padrao }}
+                            {{ 'porção' if sub.com_padrao == 1 else 'porções' }}
+                            com {{ sub.original }} (padrão) e
+                        {% endif %}
+                        {{ sub.com_alternativo }}
+                        {{ 'porção' if sub.com_alternativo == 1 else 'porções' }}
+                        com
+                        {% for alt in sub.alternativas %}
+                            {{ alt.nome }}
+                            ({{ alt.quantidade|round(3) }} {{ alt.unidade }}){% if not loop.last %},{% endif %}
+                        {% endfor %}
+                        no lugar de {{ sub.original }}.
+                    </p>
+                {% endfor %}
+
             </div>
 
             <hr>

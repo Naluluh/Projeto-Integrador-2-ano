@@ -1,26 +1,36 @@
-{%extends "base.html" %}
+{% extends "base.html" %}
+
 {% block titulo %}
 Categorias
 {% endblock %}
 
 {% block conteudo %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Categorias</title>
-</head>
-<body>
-    <form method="post">
-        {%for u in categorias%}
-            <section class="auth-card">
-                <a href="{{url_for('categorias.exibir', categoria=u['id'])}}"><img class="foto-perfil"
-                src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"></a>
-                <h2>{{u['nome']}}</h2>
-            </section>
-        {%endfor%}
-    </form>
-    {% endblock %}
-</body>
-</html>
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Categorias</h1>
+
+        {% if session.get('cargo') == 'cozinheiro' %}
+            <p>
+                <a href="{{ url_for('perfil_chef.categorias') }}">
+                    Escolher as categorias pelas quais sou responsável →
+                </a>
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+{% for u in categorias %}
+    <section class="auth-card">
+        <a href="{{ url_for('categorias.exibir', categoria=u['id']) }}">
+            <img
+                class="foto-perfil"
+                src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
+                alt="{{ u['nome'] }}"
+            >
+        </a>
+        <h2>{{ u['nome'] }}</h2>
+    </section>
+{% endfor %}
+
+{% endblock %}

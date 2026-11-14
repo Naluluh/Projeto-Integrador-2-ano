@@ -18,10 +18,11 @@ from flask import (
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
+from models import chefs_model
 from models import pedido_model
 from models import prato_model
 from models import endereco_model
-from controllers import categorias_controller
+from controllers import carrinho as carrinho_service
 
 from utils import (
     formatar_datahora,
@@ -103,6 +104,46 @@ def novo():
 
     carrinho = _carrinho()
 
+    # Pratos que o administrador tornou indisponíveis saem do carrinho.
+    ativos = pedido_model.ids_ativos(
+        [item["produto_id"] for item in carrinho]
+    )
+
+    removidos = [
+        item["nome"] for item in carrinho
+        if item["produto_id"] not in ativos
+    ]
+
+    if removidos:
+        carrinho = [
+            item for item in carrinho
+            if item["produto_id"] in ativos
+        ]
+        session["carrinho"] = carrinho
+
+        flash(
+            "Saíram do pedido por estarem indisponíveis: "
+            + ", ".join(removidos) + ".",
+            "aviso"
+        )
+
+    # Mostra quais porções usarão ingrediente alternativo (se houver).
+    substituicoes = {}
+
+    if carrinho:
+        try:
+            plano, _ = pedido_model.planejar(carrinho)
+
+            for item_plano in plano:
+                mensagens = pedido_model.mensagens_substituicao(item_plano)
+
+                if mensagens:
+                    substituicoes[item_plano["produto"]["id"]] = mensagens
+
+        except ValueError as erro:
+            # O estoque mudou desde que o prato foi adicionado.
+            flash(str(erro), "erro")
+
     total = sum(
         item["preco_centavos"] * item["quantidade"]
         for item in carrinho
@@ -113,6 +154,7 @@ def novo():
         pratos=prato_model.listar_para_pedido(),
         carrinho=carrinho,
         total=total,
+        substituicoes=substituicoes,
         endereco_atual=endereco_model.ultimo_endereco(
             session["usuario_id"]
         )
@@ -125,94 +167,51 @@ def adicionar():
     """Adiciona um produto ao carrinho."""
 
     try:
-
-        produto_id = int(
-            request.form.get("produto_id", "")
-        )
-
-        quantidade = int(
-            request.form.get("quantidade", "")
-        )
+        produto_id = int(request.form.get("produto_id", ""))
+        quantidade = int(request.form.get("quantidade", ""))
 
     except (ValueError, TypeError):
-
         produto_id = 0
         quantidade = 0
 
     produto = prato_model.buscar(produto_id)
 
     if produto is None or quantidade <= 0:
-
-        flash(
-            "Selecione um produto e uma quantidade válida.",
-            "erro"
-        )
-
+        flash("Selecione um produto e uma quantidade válida.", "erro")
         return redirect(url_for("pedido.novo"))
 
-    # Exige que um cozinheiro tenha sido selecionado.
+    if not produto["ativo"]:
+        flash("Este prato está indisponível no momento.", "erro")
+        return redirect(url_for("pedido.novo"))
+
     chef_id = session.get("chef_id")
 
-    if not chef_id:
-
-        flash(
-            "Selecione um cozinheiro antes de adicionar produtos.",
-            "erro"
-        )
-
-        return redirect(url_for("categorias.main"))
-
-    # Verifica se o cozinheiro prepara o produto.
-    from database import get_db
-
-    relacionado = get_db().execute("""
-        SELECT 1
-        FROM produto_chefs
-        WHERE produto_id = ?
-        AND chef_id = ?
-    """, (
-        produto_id,
-        chef_id
-    )).fetchone()
-
-    if relacionado is None:
-
-        flash(
-            "O cozinheiro selecionado não prepara este produto.",
-            "erro"
-        )
-
-        return redirect(url_for("pedido.novo"))
-
-    carrinho = _carrinho()
-
-    existente = next(
-        (
-            item for item in carrinho
-            if item["produto_id"] == produto_id
-        ),
-        None
-    )
-
-    if existente:
-
-        existente["quantidade"] += quantidade
-
-    else:
-
-        carrinho.append({
-            "produto_id": produto["id"],
-            "nome": produto["nome"],
-            "preco_centavos": produto["preco_centavos"],
+    # Sem cozinheiro escolhido (ou com um que não faz este prato), a pessoa
+    # é levada à lista de cozinheiros do prato. O pedido fica guardado e é
+    # concluído assim que ela escolher o cozinheiro.
+    if not chef_id or not chefs_model.verificar_chef_produto(
+        chef_id, produto_id
+    ):
+        session["pedido_pendente"] = {
+            "produto_id": produto_id,
             "quantidade": quantidade
-        })
+        }
 
-    session["carrinho"] = carrinho
+        if chef_id:
+            flash(
+                "O cozinheiro selecionado não prepara este prato. "
+                "Escolha outro cozinheiro.",
+                "aviso"
+            )
+        else:
+            flash(
+                "Escolha o cozinheiro que vai preparar este prato.",
+                "aviso"
+            )
 
-    flash(
-        "Produto adicionado ao pedido.",
-        "sucesso"
-    )
+        return redirect(url_for("chefs.por_prato", id_p=produto_id))
+
+    carrinho_service.incluir_no_carrinho(produto, quantidade)
 
     return redirect(url_for("pedido.novo"))
 
@@ -238,6 +237,7 @@ def remover(indice):
 def limpar():
 
     session.pop("carrinho", None)
+    session.pop("pedido_pendente", None)
 
     flash(
         "Pedido esvaziado.",
@@ -281,7 +281,7 @@ def finalizar():
         return redirect(url_for("endereco.cadastrar"))
 
     try:
-        pedido_id = pedido_model.finalizar(
+        pedido_id, avisos = pedido_model.finalizar(
             session["usuario_id"],
             chef_id,
             carrinho,
@@ -296,11 +296,16 @@ def finalizar():
     session.pop("chef_id", None)
     session.pop("categoria_id", None)
     session.pop("produto_id", None)
+    session.pop("pedido_pendente", None)
 
     flash(
         "Pedido registrado com sucesso.",
         "sucesso"
     )
+
+    # Registra na tela quais porções usaram ingrediente alternativo.
+    for aviso in avisos:
+        flash(aviso, "aviso")
 
     return redirect(
         url_for(
@@ -361,6 +366,7 @@ def detalhes(pedido_id):
         "detalhes_pedido.html",
         pedido=pedido,
         itens=itens,
+        substituicoes=pedido_model.substituicoes_por_item(pedido_id),
         pode_alterar_status=pode_alterar_status,
         pode_cancelar=pode_cancelar
     )
