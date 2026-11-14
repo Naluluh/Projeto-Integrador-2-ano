@@ -350,7 +350,7 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
     db = get_db()
 
     try:
-        db.execute("BEGIN IMMEDIATE")
+        db.execute("BEGIN")
 
         # 1. Valida o cozinheiro.
         chef = db.execute("""
