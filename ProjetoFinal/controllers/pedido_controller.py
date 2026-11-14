@@ -122,7 +122,7 @@ def novo():
         session["carrinho"] = carrinho
 
         flash(
-            "Saíram do pedido por estarem indisponíveis: "
+            "Produtos indisponíveis: "
             + ", ".join(removidos) + ".",
             "aviso"
         )
@@ -177,7 +177,7 @@ def adicionar():
     produto = prato_model.buscar(produto_id)
 
     if produto is None or quantidade <= 0:
-        flash("Selecione um produto e uma quantidade válida.", "erro")
+        flash("Selecione um prato e uma quantidade válida.", "erro")
         return redirect(url_for("pedido.novo"))
 
     if not produto["ativo"]:
@@ -199,8 +199,8 @@ def adicionar():
 
         if chef_id:
             flash(
-                "O cozinheiro selecionado não prepara este prato. "
-                "Escolha outro cozinheiro.",
+                "Cozinheiro indisponível. "
+                "Escolha outro.",
                 "aviso"
             )
         else:
@@ -268,7 +268,7 @@ def finalizar():
     if not chef_id:
 
         flash(
-            "Selecione um cozinheiro antes de finalizar.",
+            "Selecione um cozinheiro.",
             "erro"
         )
 

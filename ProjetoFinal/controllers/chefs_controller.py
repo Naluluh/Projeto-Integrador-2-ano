@@ -153,7 +153,7 @@ def selecionar_prato(id_p, chef_id):
         id_p
     ):
         flash(
-            "Esse cozinheiro não está relacionado ao produto.",
+            "Cozinheiro indiponível para esse produto.",
             "erro"
         )
 

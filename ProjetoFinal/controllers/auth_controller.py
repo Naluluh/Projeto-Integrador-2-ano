@@ -141,8 +141,7 @@ def login():
 
             if usuario["senha_temporaria"]:
                 flash(
-                    "Você entrou com uma senha temporária. "
-                    "Defina uma nova senha para continuar.",
+                    "Defina uma nova senha.",
                     "aviso"
                 )
 
@@ -239,7 +238,7 @@ def _cadastrar_usuario(cargos_permitidos, template):
     except IntegrityError:
 
         # O usuário possui uma restrição UNIQUE.
-        flash("Esse nome de usuário já está em uso.", "erro")
+        flash("Defina outro nome de usuário.", "erro")
         return render_template(template, dados=dados)
 
     return usuario_id, cargo
@@ -351,7 +350,7 @@ def alterar_senha():
         login_model.limpar(chave)
         session.pop("trocar_senha", None)
 
-        flash("Senha alterada com sucesso.", "sucesso")
+        flash("Senha alterada.", "sucesso")
 
         return redirect(
             _destino_apos_login(usuario["id"], usuario["cargo"])
@@ -377,7 +376,7 @@ def esqueci_senha():
 
         if espera:
             flash(
-                "Muitos pedidos seguidos. Aguarde "
+                "Aguarde"
                 f"{_texto_espera(espera)} e tente novamente.",
                 "erro"
             )
@@ -394,8 +393,7 @@ def esqueci_senha():
 
         # Mesma resposta exista o usuário ou não (não revela quem tem conta).
         flash(
-            "Pedido registrado. Se o usuário existir, o administrador "
-            "foi avisado e vai gerar uma senha temporária para você.",
+            "Pedido registrado. Aguarde, o administrador gerará uma senha temporária.",
             "sucesso"
         )
 

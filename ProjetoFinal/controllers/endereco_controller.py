@@ -121,7 +121,7 @@ def editar():
     endereco = endereco_model.ultimo_endereco(usuario_id)
     if endereco is None:
 
-        flash("Você ainda não possui um endereço cadastrado.", "erro")
+        flash("Nenhum endereço cadastrado.", "erro")
         return redirect(url_for("endereco.cadastrar"))
 
     if request.method == "POST":
@@ -164,7 +164,7 @@ def editar():
             pais
         )
 
-        flash("Endereço atualizado com sucesso.", "sucesso")
+        flash("Endereço atualizado.", "sucesso")
 
         return redirect(url_for("pedido.novo"))
 

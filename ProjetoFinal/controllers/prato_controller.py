@@ -139,11 +139,10 @@ def alterar_visibilidade(prato_id):
     prato_model.definir_ativo(prato_id, ativo)
 
     if ativo:
-        flash(f"{prato['nome']} agora está disponível para todos.", "sucesso")
+        flash(f"{prato['nome']} está visível para todos.", "sucesso")
     else:
         flash(
-            f"{prato['nome']} ficou indisponível e está oculto para os "
-            "outros usuários. Os pedidos antigos continuam no histórico.",
+            f"{prato['nome']} foi ocultado." 
             "sucesso"
         )
 
@@ -323,7 +322,7 @@ def novo():
                 chefs_ids=chefs_ids,
                 foto_url=foto_url
             )
-            flash("Produto cadastrado com sucesso.", "sucesso")
+            flash("Produto cadastrado.", "sucesso")
             return redirect(url_for("prato.listar"))
 
         except (ValueError, TypeError) as erro:
@@ -362,7 +361,7 @@ def editar(prato_id):
                 chefs_ids=chefs_ids,
                 foto_url=foto_url
             )
-            flash("Produto e receita atualizados com sucesso.", "sucesso")
+            flash("Produto e receita atualizados.", "sucesso")
             return redirect(url_for("prato.listar"))
 
         except (ValueError, TypeError) as erro:

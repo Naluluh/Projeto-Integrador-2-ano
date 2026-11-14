@@ -129,7 +129,7 @@ def novo():
                 )
 
                 flash(
-                    "Funcionário cadastrado com sucesso.",
+                    "Usuário cadastrado.",
                     "sucesso"
                 )
 
@@ -151,7 +151,7 @@ def novo():
 
                 # O nome de usuário já existe (restrição UNIQUE).
                 flash(
-                    "Esse nome de usuário já está em uso.",
+                    "Nome de usuário indisponível.",
                     "erro"
                 )
 
@@ -266,7 +266,7 @@ def editar(usuario_id):
                 )
 
                 flash(
-                    "Funcionário atualizado com sucesso.",
+                    "Usuário atualizado.",
                     "sucesso"
                 )
 
@@ -285,7 +285,7 @@ def editar(usuario_id):
 
                 # O nome de usuário já existe (restrição UNIQUE).
                 flash(
-                    "Esse nome de usuário já está em uso.",
+                    "Nome de usuário indisponível.",
                     "erro"
                 )
 
@@ -350,7 +350,7 @@ def excluir(usuario_id):
         )
 
     flash(
-        "Funcionário excluído com sucesso.",
+        "Funcionário excluído.",
         "sucesso"
     )
 
