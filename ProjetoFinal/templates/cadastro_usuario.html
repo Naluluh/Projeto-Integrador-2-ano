@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
+{% from "_formas.html" import salada_publica %}
+
+{% block titulo %}
+Cadastro
+{% endblock %}
+
+{% block conteudo %}
+
+{{ salada_publica() }}
+
+<section class="auth-card">
+
+    <h1>Criar conta</h1>
+
+    <form
+        method="post"
+        class="formulario"
+        enctype="multipart/form-data"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+            Nome completo
+
+            <input
+                name="nome"
+                required
+                minlength="2"
+                value="{{ dados.get('nome', '') }}"
+            >
+        </label>
+
+        <label>
+            Usuário
+
+            <input
+                name="usuario"
+                required
+                minlength="3"
+                autocomplete="username"
+                value="{{ dados.get('usuario', '') }}"
+            >
+        </label>
+
+        {{ campo_senha("senha", "Criar senha", regras=true) }}
+
+        {{ campo_senha("confirmar_senha", "Confirmar senha", confirmar_de="senha") }}
+
+        <label>
+            Tipo de conta
+
+            <select name="cargo" required>
+
+                <option value="">
+                    Selecione...
+                </option>
+
+                <option value="cliente"
+                    {% if dados.get('cargo') == 'cliente' %}selected{% endif %}>
+                    Cliente
+                </option>
+
+                <option value="cozinheiro"
+                    {% if dados.get('cargo') == 'cozinheiro' %}selected{% endif %}>
+                    Cozinheiro
+                </option>
+
+            </select>
+        </label>
+
+        <label>
+            Foto de perfil (opcional)
+
+            <input
+                type="file"
+                name="foto_perfil"
+                accept="image/*"
+            >
+        </label>
+
+        <button
+            class="botao primario botao--grande"
+            type="submit"
+        >
+            Cadastrar usuário
+        </button>
+
+    </form>
+
+    <p>
+        <a href="{{ url_for('auth.login') }}">
+            Voltar ao login
+        </a>
+    </p>
+
+</section>
+
+{% endblock %}

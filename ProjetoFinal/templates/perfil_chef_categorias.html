@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Minhas bancadas · Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Minhas bancadas</h1>
+        <p>
+            Escolha as bancadas pelas quais você é responsável. Ao assumir
+            uma bancada, você passa a preparar os pratos dela; ao deixá-la,
+            deixa de aparecer para esses pratos. Os pedidos que você já
+            preparou continuam no seu histórico.
+        </p>
+    </div>
+</div>
+
+<div class="tabela-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Bancada</th>
+                <th>Pratos</th>
+                <th>Situação</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for c in categorias %}
+            <tr>
+                <td>
+                    <img
+                        class="miniatura"
+                        src="{{ foto_src(c.foto_url, 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
+                        alt=""
+                    >
+                    <strong>{{ c.nome }}</strong>
+                </td>
+
+                <td>{{ c.total_produtos }}</td>
+
+                <td>
+                    {% if c.responsavel %}
+                        <span class="selo sucesso">Sou responsável</span>
+                    {% else %}
+                        <span class="selo">Não sou responsável</span>
+                    {% endif %}
+                </td>
+
+                <td class="acoes">
+                    {% if c.responsavel %}
+                        <form
+                            method="post"
+                            action="{{ url_for('perfil_chef.remover_categoria', categoria_id=c.id) }}"
+                            onsubmit="return confirm('Deixar de ser responsável por esta bancada? Você sairá dos pratos dela (o histórico de pedidos é mantido).')"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="botao botao--perigo botao--mini">Deixar bancada</button>
+                        </form>
+                    {% else %}
+                        <form
+                            method="post"
+                            action="{{ url_for('perfil_chef.adicionar_categoria', categoria_id=c.id) }}"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="botao primario botao--mini">Assumir bancada</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="vazio">Nenhuma bancada cadastrada.</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+<p>
+    <a href="{{ url_for('chefs.perfil', chef_id=session.get('usuario_id')) }}">
+        Ver meu perfil
+    </a>
+</p>
+
+{% endblock %}

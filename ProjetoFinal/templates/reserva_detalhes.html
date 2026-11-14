@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Reserva {{ reserva.codigo }}
+{% endblock %}
+
+{% block conteudo %}
+
+{% set cargo = session.get("cargo") %}
+
+<div class="cabecalho-pagina">
+
+    <div>
+        <h1>Reserva #{{ reserva.codigo }}</h1>
+        <p>
+            <strong>{{ reserva.bancada_nome }}</strong> com {{ reserva.chef_nome }}<br>
+            {{ reserva.data_inicio|dataiso }}{% if reserva.data_fim != reserva.data_inicio %} a {{ reserva.data_fim|dataiso }}{% endif %}
+            · {{ reserva.pessoas }} pessoa{{ "s" if reserva.pessoas != 1 }}
+            {% if cargo != "cliente" %}· cliente {{ reserva.cliente_nome }}{% endif %}
+        </p>
+        <p>
+            <span class="selo {% if reserva.status_exibido == 'cancelada' %}erro{% elif reserva.status_exibido == 'concluída' %}aviso{% else %}sucesso{% endif %}">
+                {{ reserva.status_exibido }}
+            </span>
+        </p>
+        {% if reserva.telefone or reserva.email or reserva.observacoes %}
+            <p>
+                {% if reserva.telefone %}Telefone: {{ reserva.telefone }}{% endif %}
+                {% if reserva.email %} · {{ reserva.email }}{% endif %}
+                {% if reserva.observacoes %}<br>Obs.: {{ reserva.observacoes }}{% endif %}
+            </p>
+        {% endif %}
+    </div>
+
+    {% if aceita and cargo in ["cliente", "administrador"] %}
+        <form method="post" action="{{ url_for('reservas.cancelar', reserva_id=reserva.id) }}"
+              onsubmit="return confirm('Cancelar esta reserva? A bancada será liberada.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="botao botao--perigo">Cancelar reserva</button>
+        </form>
+    {% endif %}
+
+</div>
+
+{% if cargo == "cliente" %}
+
+    <h2>Pedidos desta reserva</h2>
+
+    {% if aceita %}
+
+        <p>
+            Só aparecem os pratos da bancada <strong>{{ reserva.bancada_nome }}</strong>
+            feitos por <strong>{{ reserva.chef_nome }}</strong>.
+        </p>
+
+        {% if produtos %}
+
+            <section class="cards" aria-label="Pratos da reserva">
+
+                {% for t in produtos %}
+
+                    <article class="card card--item">
+
+                        <img
+                            class="foto-perfil"
+                            src="{{ foto_src(t['foto_url'], 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
+                            alt=""
+                        >
+
+                        <h3>{{ t['nome'] }}</h3>
+                        <p>{{ t['preco_centavos']|moeda }}</p>
+
+                        <form method="post" action="{{ url_for('reservas.adicionar_prato', reserva_id=reserva.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <input type="hidden" name="produto_id" value="{{ t['id'] }}">
+
+                            <label for="quantidade_{{ t['id'] }}">Quantidade:</label>
+                            <input type="number" id="quantidade_{{ t['id'] }}" name="quantidade" min="1" value="1" required>
+
+                            <button type="submit" class="botao primario">Adicionar ao pedido</button>
+
+                        </form>
+
+                    </article>
+
+                {% endfor %}
+
+            </section>
+
+        {% else %}
+
+            <p class="vazio">{{ reserva.chef_nome }} ainda não tem pratos ativos nesta bancada.</p>
+
+        {% endif %}
+
+        {% if carrinho %}
+
+            <h3>Pedido em montagem</h3>
+
+            <ul>
+                {% for item in carrinho %}
+                    <li>{{ item.quantidade }}x {{ item.nome }} — {{ (item.preco_centavos * item.quantidade)|moeda }}</li>
+                {% endfor %}
+            </ul>
+
+            <p><strong>Total: {{ total|moeda }}</strong></p>
+
+            <a class="botao botao--sucesso" href="{{ url_for('pedido.novo') }}">Revisar e finalizar</a>
+
+        {% endif %}
+
+    {% else %}
+
+        <p class="vazio">Esta reserva não aceita mais pedidos.</p>
+
+    {% endif %}
+
+{% endif %}
+
+<h3>Pedidos já feitos</h3>
+
+<div class="tabela-wrapper">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Data e hora</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Detalhes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in pedidos %}
+                <tr>
+                    <td>#{{ p.id }}</td>
+                    <td>{{ p.criado_em|datahora }}</td>
+                    <td><span class="status-pedido" data-status="{{ p.status }}">{{ p.status }}</span></td>
+                    <td><strong>{{ p.total_centavos|moeda }}</strong></td>
+                    <td>
+                        <a class="botao botao--neutro botao--mini" href="{{ url_for('pedido.detalhes', pedido_id=p.id) }}">Detalhes</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="vazio">Nenhum pedido nesta reserva ainda.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p><a href="{{ url_for('reservas.listar') }}">← Voltar para as reservas</a></p>
+
+{% endblock %}

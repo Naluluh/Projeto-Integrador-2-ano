@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
+
+{% block titulo %}
+{% if usuario %}Editar usuário{% else %}Novo usuário{% endif %} - Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>
+        {% if usuario %}
+            Editar usuário
+        {% else %}
+            Novo usuário
+        {% endif %}
+    </h1>
+
+    <form
+        method="post"
+        class="formulario"
+        enctype="multipart/form-data"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+            Nome completo
+
+            <input
+                name="nome"
+                required
+                minlength="2"
+                value="{{ usuario['nome'] if usuario else '' }}"
+            >
+        </label>
+
+        <label>
+            Usuário
+
+            <input
+                name="usuario"
+                required
+                minlength="3"
+                autocomplete="username"
+                value="{{ usuario['usuario'] if usuario else '' }}"
+            >
+        </label>
+
+        {% if usuario %}
+            <p class="dica">
+                Deixe a senha em branco para manter a senha atual.
+            </p>
+        {% endif %}
+
+        {{ campo_senha("senha", "Senha", regras=true, obrigatorio=(not usuario)) }}
+
+        {{ campo_senha("confirmar_senha", "Confirmar senha", confirmar_de="senha", obrigatorio=(not usuario)) }}
+
+        <label>
+            Cargo
+
+            <select name="cargo" required>
+                <option value="">Selecione...</option>
+
+                {% for valor, nome in [
+                    ('cliente', 'Cliente'),
+                    ('cozinheiro', 'Cozinheiro'),
+                    ('administrador', 'Administrador')
+                ] %}
+                <option value="{{ valor }}"
+                    {% if usuario and usuario['cargo'] == valor %}selected{% endif %}>
+                    {{ nome }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        {% if usuario and usuario['foto_url'] %}
+            <p>Foto atual:</p>
+
+            <img
+                src="{{ foto_src(usuario['foto_url']) }}"
+                alt="Foto atual do usuário"
+                class="foto-perfil"
+            >
+        {% endif %}
+
+        <label>
+            Foto de perfil
+
+            <input
+                type="file"
+                name="foto_perfil"
+                accept="image/*"
+            >
+        </label>
+
+        <button
+            class="botao primario botao--grande"
+            type="submit"
+        >
+            {% if usuario %}Salvar alterações{% else %}Cadastrar usuário{% endif %}
+        </button>
+
+    </form>
+
+    <p>
+        <a href="{{ url_for('usuario.listar') }}">
+            Voltar
+        </a>
+    </p>
+
+</section>
+
+{% endblock %}

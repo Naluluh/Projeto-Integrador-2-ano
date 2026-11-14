@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Bancadas
+{% endblock %}
+
+{% block conteudo %}
+
+{% set cargo = session.get('cargo') %}
+
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Bancadas</h1>
+        <p>Consulte as bancadas, veja os cozinheiros e reserve os dias.</p>
+
+        {% if cargo == 'cozinheiro' %}
+            <p>
+                <a href="{{ url_for('perfil_chef.categorias') }}">
+                    Escolher as bancadas pelas quais sou responsável →
+                </a>
+            </p>
+        {% endif %}
+    </div>
+
+    {% if cargo == 'cliente' %}
+        <a class="botao primario" href="{{ url_for('reservas.listar') }}">Minhas reservas</a>
+    {% elif cargo == 'administrador' %}
+        <a class="botao primario" href="{{ url_for('reservas.listar') }}">Ver reservas</a>
+    {% endif %}
+</div>
+
+<section class="cards" aria-label="Bancadas">
+
+    {% for u in categorias %}
+
+        <article class="card card--item">
+
+            <a
+                href="{{ url_for('categorias.exibir', categoria=u['id']) }}"
+                aria-label="Ver a bancada {{ u['nome'] }}"
+            >
+                <img
+                    class="foto-perfil"
+                    src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
+                    alt=""
+                >
+            </a>
+
+            <h2>{{ u['nome'] }}</h2>
+
+            {% if u['id'] in ocupadas %}
+                <span class="selo aviso">Ocupada hoje</span>
+            {% else %}
+                <span class="selo sucesso">Disponível hoje</span>
+            {% endif %}
+
+            {% if cargo == 'cliente' %}
+                <a class="botao primario" href="{{ url_for('reservas.nova', bancada=u['id']) }}">
+                    Reservar dias
+                </a>
+            {% endif %}
+
+        </article>
+
+    {% else %}
+
+        <p class="vazio">Nenhuma bancada cadastrada.</p>
+
+    {% endfor %}
+
+</section>
+
+{% endblock %}

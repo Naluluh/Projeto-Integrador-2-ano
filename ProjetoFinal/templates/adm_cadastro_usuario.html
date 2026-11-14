@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import campo_senha %}
+
+{% block titulo %}
+Cadastro
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>Cadastrar funcionário</h1>
+
+    <form
+        method="post"
+        class="formulario"
+        enctype="multipart/form-data"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+            Foto de perfil (opcional)
+
+            <input
+                id="foto_perfil"
+                name="foto_perfil"
+                type="file"
+                accept="image/*"
+            >
+        </label>
+
+        <label>
+            Nome completo
+
+            <input
+                name="nome"
+                required
+                minlength="2"
+                value="{{ dados.get('nome', '') }}"
+            >
+        </label>
+
+        <label>
+            Usuário
+
+            <input
+                name="usuario"
+                required
+                minlength="3"
+                autocomplete="username"
+                value="{{ dados.get('usuario', '') }}"
+            >
+        </label>
+
+        {{ campo_senha("senha", "Criar senha", regras=true) }}
+
+        {{ campo_senha("confirmar_senha", "Confirmar senha", confirmar_de="senha") }}
+
+        <label>
+            Cargo
+
+            <select name="cargo" required>
+                <option value="">Selecione...</option>
+
+                {% for valor, nome in [
+                    ('cliente', 'Cliente'),
+                    ('cozinheiro', 'Cozinheiro'),
+                    ('administrador', 'Administrador')
+                ] %}
+                <option value="{{ valor }}"
+                    {% if dados.get('cargo') == valor %}selected{% endif %}>
+                    {{ nome }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <button
+            class="botao primario botao--grande"
+            type="submit"
+        >
+            Cadastrar usuário
+        </button>
+
+    </form>
+
+    <p>
+        <a href="{{ url_for('usuario.listar') }}">
+            Voltar
+        </a>
+    </p>
+
+</section>
+
+{% endblock %}

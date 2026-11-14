@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Reservas
+{% endblock %}
+
+{% block conteudo %}
+
+{% set cargo = session.get("cargo") %}
+
+<div class="cabecalho-pagina">
+
+    <div>
+        <h1>{% if cargo == "cliente" %}Minhas reservas{% else %}Reservas{% endif %}</h1>
+
+        {% if cargo == "administrador" %}
+            <p>Veja todas as reservas de bancadas.</p>
+        {% elif cargo == "cozinheiro" %}
+            <p>Reservas em que você foi escolhido.</p>
+        {% else %}
+            <p>Clique em uma reserva para fazer pedidos da bancada reservada.</p>
+        {% endif %}
+    </div>
+
+    {% if cargo == "cliente" %}
+        <a class="botao primario" href="{{ url_for('reservas.nova') }}">
+            Nova reserva
+        </a>
+    {% endif %}
+
+</div>
+
+{% if cargo == "administrador" %}
+
+    <form method="get" class="filtro-reservas" aria-label="Filtrar reservas">
+
+        <label for="filtro_data">Dia</label>
+        <input type="date" id="filtro_data" name="data" value="{{ filtros.data }}">
+
+        <label for="filtro_status">Status</label>
+        <select id="filtro_status" name="status">
+            <option value="">Todos</option>
+            <option value="confirmada" {% if filtros.status == "confirmada" %}selected{% endif %}>Confirmadas</option>
+            <option value="cancelada" {% if filtros.status == "cancelada" %}selected{% endif %}>Canceladas</option>
+        </select>
+
+        <label for="filtro_busca">Cliente ou código</label>
+        <input type="text" id="filtro_busca" name="busca" value="{{ filtros.busca }}" maxlength="60">
+
+        <button type="submit" class="botao primario">Filtrar</button>
+        <a class="botao secundario" href="{{ url_for('reservas.listar') }}">Limpar</a>
+
+    </form>
+
+{% endif %}
+
+<div class="tabela-wrapper">
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Código</th>
+                {% if cargo != "cliente" %}<th>Cliente</th>{% endif %}
+                <th>Bancada</th>
+                {% if cargo != "cozinheiro" %}<th>Cozinheiro</th>{% endif %}
+                <th>Período</th>
+                <th>Pessoas</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for r in reservas %}
+
+                <tr>
+                    <td>#{{ r.codigo }}</td>
+                    {% if cargo != "cliente" %}<td>{{ r.cliente_nome }}</td>{% endif %}
+                    <td>{{ r.bancada_nome }}</td>
+                    {% if cargo != "cozinheiro" %}<td>{{ r.chef_nome }}</td>{% endif %}
+                    <td>{{ r.data_inicio|dataiso }}{% if r.data_fim != r.data_inicio %} a {{ r.data_fim|dataiso }}{% endif %}</td>
+                    <td>{{ r.pessoas }}</td>
+                    <td>
+                        <span class="selo {% if r.status_exibido == 'cancelada' %}erro{% elif r.status_exibido == 'concluída' %}aviso{% else %}sucesso{% endif %}">
+                            {{ r.status_exibido }}
+                        </span>
+                    </td>
+                    <td>
+                        <a class="botao botao--neutro botao--mini" href="{{ url_for('reservas.detalhes', reserva_id=r.id) }}">
+                            Abrir
+                        </a>
+                    </td>
+                </tr>
+
+            {% else %}
+
+                <tr>
+                    <td colspan="8" class="vazio">
+                        {% if cargo == "cliente" %}
+                            Você ainda não fez reservas.
+                        {% else %}
+                            Nenhuma reserva encontrada.
+                        {% endif %}
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+{{ chef.nome }} · Perfil do cozinheiro
+{% endblock %}
+
+{% block conteudo %}
+
+<a href="{{ url_for('chefs.listar') }}">← Todos os cozinheiros</a>
+
+<section class="auth-card perfil-chef">
+
+    <img
+        class="foto-perfil"
+        src="{{ foto_src(chef.foto_url, 'images/fotos_perfil/usuarios/template_usuarios.jpeg') }}"
+        alt="Foto de {{ chef.nome }}"
+    >
+
+    <h1>{{ chef.nome }}</h1>
+
+    <p class="dica">Usuário: {{ chef.usuario }}</p>
+    <p class="dica">Cozinheiro desde {{ chef.criado_em|datahora }}</p>
+
+    {% if chef.perfil_id %}
+
+        <h2>Formação</h2>
+        <p>{{ chef.formacao or 'Não informada.' }}</p>
+
+        <h2>Biografia</h2>
+        <p>{{ chef.biografia }}</p>
+
+        <h2>Experiência</h2>
+        <p>{{ chef.experiencia or 'Não informada.' }}</p>
+
+    {% else %}
+
+        <p>Este cozinheiro ainda não preencheu o perfil.</p>
+
+    {% endif %}
+
+    {% if e_proprio %}
+        <div class="acoes-finais">
+            {% if chef.perfil_id %}
+                <a class="botao secundario" href="{{ url_for('perfil_chef.editar') }}">
+                    Editar perfil
+                </a>
+            {% else %}
+                <a class="botao primario" href="{{ url_for('perfil_chef.cadastrar') }}">
+                    Completar perfil
+                </a>
+            {% endif %}
+
+            <a class="botao primario" href="{{ url_for('perfil_chef.categorias') }}">
+                Gerenciar minhas bancadas
+            </a>
+        </div>
+    {% endif %}
+
+</section>
+
+
+<h2>Bancadas sob responsabilidade</h2>
+
+{% if categorias %}
+
+    <div class="categorias">
+        {% for categoria in categorias %}
+            <a href="{{ url_for('categorias.exibir', categoria=categoria.id) }}">
+                {{ categoria.nome }}
+            </a>
+        {% endfor %}
+    </div>
+
+{% else %}
+
+    <p>Nenhuma bancada no momento.</p>
+
+{% endif %}
+
+
+<h2>Pratos sob responsabilidade</h2>
+
+{% if produtos %}
+
+    <div class="tabela-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Prato</th>
+                    <th>Bancada</th>
+                    <th>Preço</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in produtos %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('prato.detalhes', prato_id=p.id) }}">{{ p.nome }}</a>
+                        {% if not p.ativo %}
+                            <span class="selo aviso">Indisponível</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.categoria_nome }}</td>
+                    <td>{{ p.preco_centavos|moeda }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% else %}
+
+    <p>Nenhum prato no momento.</p>
+
+{% endif %}
+
+{% endblock %}

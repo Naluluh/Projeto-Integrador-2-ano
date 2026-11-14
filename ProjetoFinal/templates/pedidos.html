@@ -1,0 +1,138 @@
+
+{% extends "base.html" %}
+
+{% block titulo %}
+Pedidos
+{% endblock %}
+
+{% block conteudo %}
+
+{% set cargo = session.get("cargo") %}
+
+<div class="cabecalho-pagina">
+
+    <div>
+        <h1>Pedidos</h1>
+
+        {% if cargo == "administrador" %}
+            <p>Acompanhe todos os pedidos do restaurante.</p>
+
+        {% elif cargo == "cliente" %}
+            <p>Acompanhe seus pedidos realizados.</p>
+
+        {% elif cargo == "cozinheiro" %}
+            <p>Acompanhe os pedidos destinados a você.</p>
+        {% endif %}
+    </div>
+
+    {% if cargo == "administrador" %}
+        <a
+            class="botao secundario"
+            href="{{ url_for('pedido.exportar') }}"
+        >
+            Exportar Excel
+        </a>
+    {% endif %}
+
+</div>
+
+
+<div class="tabela-wrapper">
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Data e hora</th>
+
+                {% if cargo in ["administrador", "cozinheiro"] %}
+                    <th>Cliente</th>
+                {% endif %}
+
+                {% if cargo in ["administrador", "cliente"] %}
+                    <th>Cozinheiro</th>
+                {% endif %}
+
+                <th>Status</th>
+                <th>Total</th>
+                <th>Detalhes</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for p in pedidos %}
+
+                <tr>
+
+                    <td>#{{ p.id }}</td>
+
+                    <td>{{ p.criado_em|datahora }}</td>
+
+                    {% if cargo in ["administrador", "cozinheiro"] %}
+                        <td>{{ p.usuario_nome }}</td>
+                    {% endif %}
+
+                    {% if cargo in ["administrador", "cliente"] %}
+                        <td>
+                            {{ p.chef_nome or "Não informado" }}
+                        </td>
+                    {% endif %}
+
+                    <td>
+                        <span class="status-pedido" data-status="{{ p.status }}">
+                            {{ p.status }}
+                        </span>
+
+                        {% if p.usou_alternativo %}
+                            <span class="selo aviso" title="Parte do pedido usou ingrediente alternativo">
+                                ingrediente alternativo
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <strong>
+                            {{ p.total_centavos|moeda }}
+                        </strong>
+                    </td>
+
+                    <td>
+                        <a class="botao botao--neutro botao--mini" href="{{ url_for(
+                            'pedido.detalhes',
+                            pedido_id=p.id
+                        ) }}">
+                            Detalhes
+                        </a>
+                    </td>
+
+                </tr>
+
+            {% else %}
+
+                <tr>
+                    <td colspan="7" class="vazio">
+
+                        {% if cargo == "cliente" %}
+                            Você ainda não realizou pedidos.
+
+                        {% elif cargo == "cozinheiro" %}
+                            Você ainda não possui pedidos destinados a você.
+
+                        {% else %}
+                            Nenhum pedido registrado.
+                        {% endif %}
+
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

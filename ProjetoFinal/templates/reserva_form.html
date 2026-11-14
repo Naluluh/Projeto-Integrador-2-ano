@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Nova reserva
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>Nova reserva</h1>
+
+    <p>Escolha a bancada, o cozinheiro e os dias. Uma bancada só pode ter uma reserva por dia.</p>
+
+    <form
+        method="post"
+        class="formulario formulario--linhas"
+        id="form-reserva"
+        data-bancadas='{{ bancadas|tojson }}'
+        data-chef-escolhido="{{ dados.get('chef_id', '') }}"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="categoria_id">Bancada</label>
+        <select id="categoria_id" name="categoria_id" required>
+            <option value="">Escolha a bancada</option>
+            {% for b in bancadas %}
+                <option value="{{ b.id }}" {% if dados.get('categoria_id')|string == b.id|string %}selected{% endif %}>
+                    {{ b.nome }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="chef_id">Cozinheiro</label>
+        <select id="chef_id" name="chef_id" required>
+            <option value="">Escolha a bancada primeiro</option>
+        </select>
+
+        <label for="data_inicio">Primeiro dia</label>
+        <input type="date" id="data_inicio" name="data_inicio" min="{{ hoje }}" value="{{ dados.get('data_inicio', '') }}" required>
+
+        <label for="data_fim">Último dia (se for só um dia, deixe em branco)</label>
+        <input type="date" id="data_fim" name="data_fim" min="{{ hoje }}" value="{{ dados.get('data_fim', '') }}">
+
+        <p class="dica" id="dias-ocupados" aria-live="polite"></p>
+
+        <label for="pessoas">Pessoas</label>
+        <input type="number" id="pessoas" name="pessoas" min="1" max="50" value="{{ dados.get('pessoas', '') }}" required>
+
+        <label for="telefone">Telefone</label>
+        <input type="tel" id="telefone" name="telefone" maxlength="30" autocomplete="tel" value="{{ dados.get('telefone', '') }}" required>
+
+        <label for="email">E-mail (opcional)</label>
+        <input type="email" id="email" name="email" maxlength="120" autocomplete="email" value="{{ dados.get('email', '') }}">
+
+        <label for="observacoes">Observações (opcional)</label>
+        <textarea id="observacoes" name="observacoes" rows="3" maxlength="500">{{ dados.get('observacoes', '') }}</textarea>
+
+        <p class="dica">Máximo de {{ max_dias }} dias por reserva.</p>
+
+        <button type="submit" class="botao primario">Confirmar reserva</button>
+
+    </form>
+
+    <p><a href="{{ url_for('reservas.listar') }}">← Minhas reservas</a></p>
+
+</section>
+
+{% endblock %}

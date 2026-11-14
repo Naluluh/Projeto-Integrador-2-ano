@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Cardápio | Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="catalogo">
+
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Nosso cardápio</h1>
+            <p>Escolha o tipo de comida que deseja.</p>
+        </div>
+    </div>
+
+    <!-- Seleção da culinária (pílulas do Figma) -->
+    <nav class="categorias" aria-label="Categorias do cardápio">
+
+        {% for categoria in categorias %}
+        <a
+            href="{{ url_for(
+                'prato.catalogo_categoria',
+                categoria_id=categoria.id
+            ) }}"
+            {% if categoria_atual == categoria.id %}aria-current="page"{% endif %}
+        >
+            {{ categoria.nome }}
+        </a>
+        {% endfor %}
+
+    </nav>
+
+    <!-- Lista de pratos -->
+    <h2>
+        {% if categoria_atual %}
+        Pratos desta categoria
+        {% else %}
+        Escolha uma categoria para ver os pratos
+        {% endif %}
+    </h2>
+
+    <div class="pratos">
+
+        {% for prato in pratos %}
+
+        <article class="prato">
+
+            <!-- Thumbnail clicável -->
+            <a href="{{ url_for(
+                    'prato.detalhes',
+                    prato_id=prato.id
+                ) }}">
+
+                <img
+                    src="{{ foto_src(prato.foto_url, 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
+                    alt="{{ prato.nome }}"
+                >
+
+            </a>
+
+            <div class="prato-conteudo">
+
+                <h3>{{ prato.nome }}</h3>
+
+                <p>{{ prato.descricao }}</p>
+
+                <p class="preco">
+                    {{ prato.preco_centavos|moeda }}
+                </p>
+
+                {% if not prato.ativo %}
+
+                <span class="indisponivel">
+                    Oculto para os clientes
+                </span>
+
+                {% elif prato.disponivel %}
+
+                <span class="disponivel">
+                    Disponível
+                </span>
+
+                {% else %}
+
+                <span class="indisponivel">
+                    Indisponível
+                </span>
+
+                {% endif %}
+
+                <!-- Ver detalhes -->
+                <a class="botao botao--neutro" href="{{ url_for(
+                            'prato.detalhes',
+                            prato_id=prato.id
+                        ) }}">
+                    Ver detalhes
+                </a>
+
+                <!-- Adicionar ao carrinho (somente cliente e administrador). -->
+                {% if session.get('cargo') in ['cliente', 'administrador'] %}
+                <form method="POST" action="{{ url_for('pedido.adicionar') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <input type="hidden" name="produto_id" value="{{ prato.id }}">
+
+                    {% if prato.ativo and prato.disponivel %}
+
+                    <label for="quantidade_{{ prato.id }}">
+                        Quantidade:
+                    </label>
+
+                    <input
+                        type="number"
+                        id="quantidade_{{ prato.id }}"
+                        name="quantidade"
+                        min="1"
+                        value="1"
+                        required
+                    >
+
+                    <button type="submit" class="botao primario">
+                        Adicionar ao pedido
+                    </button>
+
+                    {% else %}
+
+                    <button type="button" class="botao" disabled>
+                        Indisponível
+                    </button>
+
+                    {% endif %}
+
+                </form>
+                {% endif %}
+
+            </div>
+
+        </article>
+
+        {% else %}
+
+        {% if categoria_atual %}
+        <p class="vazio">Nenhum prato disponível nesta categoria.</p>
+        {% endif %}
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}
