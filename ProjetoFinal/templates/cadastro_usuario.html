@@ -93,7 +93,7 @@ Cadastro
             <p>Foto atual:</p>
 
             <img
-                src="{{ url_for('static', filename=usuario['foto_url']) }}"
+                src="{{ foto_src(usuario['foto_url']) }}"
                 alt="Foto atual do usuário"
                 class="foto-perfil"
             >

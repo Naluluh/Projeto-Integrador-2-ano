@@ -1,81 +1,175 @@
-"""Model de pedidos e seus itens."""
+
+"""Model responsável pelos pedidos e seus itens."""
 
 from database import get_db
 
 
 def listar():
-    # Lista todos os pedidos.
-    # Também obtém o nome do funcionário responsável.
-    return get_db().execute(
-        """
+    """Lista todos os pedidos, com cliente e cozinheiro."""
+
+    db = get_db()
+
+    return db.execute("""
         SELECT
             p.*,
-            f.nome AS usuario_nome
-        FROM pedidos p
-        JOIN usuarios f
-            ON f.id = p.usuario_id
+            cliente.nome AS usuario_nome,
+            chef.nome AS chef_nome
+        FROM pedidos AS p
+
+        INNER JOIN usuarios AS cliente
+            ON cliente.id = p.usuario_id
+
+        LEFT JOIN usuarios AS chef
+            ON chef.id = p.chef_id
+
         ORDER BY p.criado_em DESC, p.id DESC
-        """
-    ).fetchall()
+    """).fetchall()
+
+
+def listar_por_cliente(usuario_id):
+    """Lista somente os pedidos de determinado cliente."""
+
+    db = get_db()
+
+    return db.execute("""
+        SELECT
+            p.*,
+            cliente.nome AS usuario_nome,
+            chef.nome AS chef_nome
+        FROM pedidos AS p
+
+        INNER JOIN usuarios AS cliente
+            ON cliente.id = p.usuario_id
+
+        LEFT JOIN usuarios AS chef
+            ON chef.id = p.chef_id
+
+        WHERE p.usuario_id = ?
+
+        ORDER BY p.criado_em DESC, p.id DESC
+    """, (usuario_id,)).fetchall()
+
+
+def listar_por_chef(chef_id):
+    """Lista somente os pedidos destinados ao cozinheiro."""
+
+    db = get_db()
+
+    return db.execute("""
+        SELECT
+            p.*,
+            cliente.nome AS usuario_nome,
+            chef.nome AS chef_nome
+        FROM pedidos AS p
+
+        INNER JOIN usuarios AS cliente
+            ON cliente.id = p.usuario_id
+
+        LEFT JOIN usuarios AS chef
+            ON chef.id = p.chef_id
+
+        WHERE p.chef_id = ?
+
+        ORDER BY p.criado_em DESC, p.id DESC
+    """, (chef_id,)).fetchall()
 
 
 def buscar(pedido_id):
-    # Busca um pedido específico.
-    return get_db().execute(
-        """
+    """Busca um pedido com os dados do cliente e cozinheiro."""
+
+    db = get_db()
+
+    return db.execute("""
         SELECT
             p.*,
-            f.nome AS usuario_nome
-        FROM pedidos p
-        JOIN usuarios f
-            ON f.id = p.usuario_id
+            cliente.nome AS usuario_nome,
+            chef.nome AS chef_nome
+        FROM pedidos AS p
+
+        INNER JOIN usuarios AS cliente
+            ON cliente.id = p.usuario_id
+
+        LEFT JOIN usuarios AS chef
+            ON chef.id = p.chef_id
+
         WHERE p.id = ?
-        """,
-        (pedido_id,)
-    ).fetchone()
+    """, (pedido_id,)).fetchone()
 
 
 def inserir_endereco(pedido_id, endereco_id):
-    # Insere o endereço no pedido.
+    """Associa um endereço ao pedido."""
+
     db = get_db()
-    db.execute(
-        """
+
+    db.execute("""
         UPDATE pedidos
         SET endereco_id = ?
         WHERE id = ?
-        """,
-        (endereco_id, pedido_id)
-    )
+    """, (endereco_id, pedido_id))
+
     db.commit()
 
 
 def listar_itens(pedido_id):
-    # Lista todos os produtos pertencentes ao pedido.
-    return get_db().execute(
-        """
+    """Lista os produtos pertencentes ao pedido."""
+
+    db = get_db()
+
+    return db.execute("""
         SELECT *
         FROM itens_pedido
         WHERE pedido_id = ?
         ORDER BY id
-        """,
-        (pedido_id,)
-    ).fetchall()
+    """, (pedido_id,)).fetchall()
 
 
 def atualizar_status(pedido_id, status):
-    # Obtém a conexão.
+    """Atualiza o status e a data de atualização."""
+
     db = get_db()
 
-    # Altera o estado do pedido.
-    db.execute(
-        """
+    db.execute("""
         UPDATE pedidos
-        SET status = ?
+        SET
+            status = ?,
+            atualizado_em = CURRENT_TIMESTAMP
         WHERE id = ?
-        """,
-        (status, pedido_id)
-    )
+    """, (status, pedido_id))
 
+    db.commit()
+
+
+def cancelar(pedido_id):
+    """
+    Cancela um pedido sem devolver ingredientes ao estoque.
+    """
+
+    db = get_db()
+
+    pedido = db.execute("""
+        SELECT status
+        FROM pedidos
+        WHERE id = ?
+    """, (pedido_id,)).fetchone()
+
+    if pedido is None:
+        raise ValueError("Pedido não encontrado.")
+
+    if pedido["status"] == "entregue":
+        raise ValueError("Não é possível cancelar um pedido entregue.")
+
+    if pedido["status"] == "cancelado":
+        raise ValueError("Este pedido já foi cancelado.")
+
+    db.execute("""
+        UPDATE pedidos
+        SET
+            status = 'cancelado',
+            atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (pedido_id,))
+
+    # Não devolve os ingredientes ao estoque.
     db.commit()
 
 
@@ -114,9 +208,11 @@ def _planejar_consumo(db, carrinho):
                 pi.quantidade,
                 i.nome,
                 i.estoque
-            FROM produto_ingredientes pi
-            JOIN ingredientes i
+            FROM produto_ingredientes AS pi
+
+            INNER JOIN ingredientes AS i
                 ON i.id = pi.ingrediente_id
+
             WHERE pi.produto_id = ?
         """, (produto_id,)).fetchall()
 
@@ -133,8 +229,6 @@ def _planejar_consumo(db, carrinho):
                 ingrediente["quantidade"] * quantidade_pratos
             )
 
-            # Estoque virtual: considera o consumo
-            # dos outros pratos do mesmo pedido.
             estoque_atual = estoques.setdefault(
                 principal_id,
                 float(ingrediente["estoque"])
@@ -143,7 +237,7 @@ def _planejar_consumo(db, carrinho):
             ingrediente_escolhido = None
             quantidade_consumida = necessario
 
-            # Primeiro tenta utilizar o ingrediente principal.
+            # Tenta utilizar primeiro o ingrediente principal.
             if estoque_atual >= necessario:
 
                 ingrediente_escolhido = {
@@ -153,18 +247,21 @@ def _planejar_consumo(db, carrinho):
 
             else:
 
-                # Se não houver estoque, procura alternativas.
+                # Procura ingredientes alternativos.
                 alternativas = db.execute("""
                     SELECT
                         pa.ingrediente_alternativo_id,
                         pa.quantidade,
                         i.nome,
                         i.estoque
-                    FROM produto_ingrediente_alternativas pa
-                    JOIN ingredientes i
+                    FROM produto_ingrediente_alternativas AS pa
+
+                    INNER JOIN ingredientes AS i
                         ON i.id = pa.ingrediente_alternativo_id
+
                     WHERE pa.produto_id = ?
-                      AND pa.ingrediente_principal_id = ?
+                    AND pa.ingrediente_principal_id = ?
+
                     ORDER BY i.nome
                 """, (
                     produto_id,
@@ -196,7 +293,6 @@ def _planejar_consumo(db, carrinho):
                         quantidade_consumida = necessario_alternativo
                         break
 
-            # Nenhuma opção disponível.
             if ingrediente_escolhido is None:
 
                 raise ValueError(
@@ -212,6 +308,7 @@ def _planejar_consumo(db, carrinho):
 
             # Agrupa o consumo por ingrediente.
             if ingrediente_id not in consumos:
+
                 consumos[ingrediente_id] = {
                     "nome": ingrediente_escolhido["nome"],
                     "quantidade": 0
@@ -227,14 +324,12 @@ def _planejar_consumo(db, carrinho):
 
 
 def disponivel(produto_id, quantidade=1):
-    """
-    Verifica se é possível preparar determinada
-    quantidade de um prato, considerando alternativas.
-    """
+    """Verifica se existe estoque para preparar um produto."""
 
     db = get_db()
 
     try:
+
         _planejar_consumo(db, [{
             "produto_id": produto_id,
             "quantidade": quantidade
@@ -246,51 +341,84 @@ def disponivel(produto_id, quantidade=1):
         return False
 
 
-def finalizar(usuario_id, carrinho):
+def finalizar(usuario_id, chef_id, carrinho, endereco_id):
     """
-    Registra o pedido e desconta os ingredientes
-    em uma única transação.
+    Registra o pedido com o cozinheiro e o endereço selecionados
+    e desconta os ingredientes em uma única transação.
     """
 
     db = get_db()
 
     try:
+        # No PostgreSQL a transação já é aberta automaticamente na primeira
+        # consulta e termina no commit/rollback (o "BEGIN IMMEDIATE" é do
+        # SQLite e causa erro de sintaxe aqui).
 
-        # Inicia uma transação compatível com PostgreSQL.
-        db.execute("BEGIN")
+        # 1. Valida o cozinheiro.
+        chef = db.execute("""
+            SELECT id FROM usuarios
+            WHERE id = ? AND cargo = 'cozinheiro'
+        """, (chef_id,)).fetchone()
 
-        # Verifica todo o carrinho antes de alterar o estoque.
+        if chef is None:
+            raise ValueError("Cozinheiro selecionado inválido.")
+
+        # 2. Valida o cliente.
+        cliente = db.execute(
+            "SELECT id FROM usuarios WHERE id = ?",
+            (usuario_id,)
+        ).fetchone()
+
+        if cliente is None:
+            raise ValueError("Usuário não encontrado.")
+
+        # 3. Valida o endereço (precisa ser do próprio cliente).
+        endereco = db.execute("""
+            SELECT id FROM enderecos
+            WHERE id = ? AND usuario_id = ?
+        """, (endereco_id, usuario_id)).fetchone()
+
+        if endereco is None:
+            raise ValueError("Endereço inválido.")
+
+        # 4. Valida se o cozinheiro prepara todos os produtos.
+        for item in carrinho:
+            relacionado = db.execute("""
+                SELECT 1 FROM produto_chefs
+                WHERE produto_id = ? AND chef_id = ?
+            """, (int(item["produto_id"]), chef_id)).fetchone()
+
+            if relacionado is None:
+                raise ValueError(
+                    f"O cozinheiro selecionado não prepara "
+                    f"o produto {item['nome']}."
+                )
+
+        # 5. Planeja o consumo (não altera o estoque ainda).
         itens, consumos = _planejar_consumo(db, carrinho)
 
-        # Calcula o valor total.
+        # 6. Calcula o total ANTES de usá-lo no INSERT.
         total = sum(
             produto["preco_centavos"] * quantidade
             for produto, quantidade in itens
         )
 
-        # Cria o pedido.
+        # 7. Registra o pedido.
         cursor = db.execute("""
             INSERT INTO pedidos (
                 usuario_id,
+                endereco_id,
+                chef_id,
                 status,
                 total_centavos
             )
-            VALUES (?, ?, ?)
-        """, (
-            usuario_id,
-            "espera",
-            total
-        ))
+            VALUES (?, ?, ?, ?, ?)
+        """, (usuario_id, endereco_id, chef_id, "em preparo", total))
 
         pedido_id = cursor.lastrowid
 
-        # Registra os pratos do pedido.
+        # 8. Registra os itens.
         for produto, quantidade in itens:
-
-            subtotal = (
-                produto["preco_centavos"] * quantidade
-            )
-
             db.execute("""
                 INSERT INTO itens_pedido (
                     pedido_id,
@@ -307,32 +435,27 @@ def finalizar(usuario_id, carrinho):
                 produto["nome"],
                 produto["preco_centavos"],
                 quantidade,
-                subtotal
+                produto["preco_centavos"] * quantidade
             ))
 
-        # Desconta os ingredientes utilizados.
+        # 9. Desconta os ingredientes.
         for ingrediente_id, dados in consumos.items():
-
             cursor = db.execute("""
                 UPDATE ingredientes
                 SET estoque = estoque - ?
-                WHERE id = ?
-                  AND estoque >= ?
+                WHERE id = ? AND estoque >= ?
             """, (
                 dados["quantidade"],
                 ingrediente_id,
                 dados["quantidade"]
             ))
 
-            # Proteção adicional contra estoque insuficiente.
             if cursor.rowcount != 1:
                 raise ValueError(
                     f"Estoque insuficiente para {dados['nome']}."
                 )
 
-        # Confirma todas as operações.
         db.commit()
-
         return pedido_id
 
     except Exception:
@@ -341,7 +464,40 @@ def finalizar(usuario_id, carrinho):
 
 
 def quantidade_total():
-    # Conta quantos pedidos foram registrados.
-    return get_db().execute(
-        "SELECT COUNT(*) AS total FROM pedidos"
-    ).fetchone()["total"]
+    """Conta quantos pedidos foram registrados."""
+
+    return get_db().execute("""
+        SELECT COUNT(*) AS total
+        FROM pedidos
+    """).fetchone()["total"]
+
+def quantidade_visivel(cargo, usuario_id):
+    """
+    Conta os pedidos que a pessoa pode ver:
+    - administrador: todos
+    - cliente: somente os próprios
+    - cozinheiro: somente os destinados a ele
+    Usa as mesmas regras de listar(), listar_por_cliente() e listar_por_chef().
+    """
+
+    db = get_db()
+
+    if cargo == "administrador":
+        consulta = "SELECT COUNT(*) AS total FROM pedidos"
+        parametros = ()
+
+    elif cargo == "cliente":
+        consulta = "SELECT COUNT(*) AS total FROM pedidos WHERE usuario_id = ?"
+        parametros = (usuario_id,)
+
+    elif cargo == "cozinheiro":
+        consulta = "SELECT COUNT(*) AS total FROM pedidos WHERE chef_id = ?"
+        parametros = (usuario_id,)
+
+        # "SELECT COUNT(*) AS total FROM pedidos "
+        # "WHERE chef_id = ? AND status NOT IN ('entregue', 'cancelado')"
+
+    else:
+        return 0
+
+    return db.execute(consulta, parametros).fetchone()["total"]

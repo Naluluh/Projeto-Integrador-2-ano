@@ -19,10 +19,7 @@
 
             <img
                 class="foto-perfil"
-                src="{{ url_for(
-                    'static',
-                    filename=chef.foto_url or 'images/fotos_perfil/usuarios/template_usuarios.jpeg'
-                ) }}"
+                src="{{ foto_src(chef.foto_url, 'images/fotos_perfil/usuarios/template_usuarios.jpeg') }}"
                 alt="Foto de {{ chef.nome }}"
             >
 

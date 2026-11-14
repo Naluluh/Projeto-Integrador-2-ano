@@ -1,9 +1,8 @@
 """CRUD, cadastro de receitas e exportação de produtos."""
 
 from io import BytesIO
-import os
 
-from werkzeug.utils import secure_filename
+from psycopg import IntegrityError
 from flask import (
     Blueprint, abort, flash, redirect, render_template,
     request, send_file, url_for
@@ -13,7 +12,10 @@ from openpyxl.styles import Font
 
 from database import get_db
 from models import categorias_model, prato_model, usuario_model, pedido_model
-from utils import moeda_para_centavos, administrador_required, gestor_required
+from utils import (
+    moeda_para_centavos, administrador_required, gestor_required,
+    salvar_imagem
+)
 
 
 prato_bp = Blueprint("prato", __name__, url_prefix="/cardapio")
@@ -74,7 +76,11 @@ def detalhes(prato_id):
     prato = prato_model.buscar(prato_id)
     if prato is None:
         abort(404)
-    return render_template("prato_detalhes.html", prato=prato)
+    return render_template(
+        "prato_detalhes.html",
+        prato=prato,
+        ingredientes=prato_model.listar_ingredientes(prato_id)
+    )
 
 
 def _dados_formulario():
@@ -192,20 +198,8 @@ def _dados_chefs():
 
 
 def _salvar_foto():
-    foto = request.files.get("foto_produto")
-    if not foto or not foto.filename:
-        return None
-
-    nome_img = secure_filename(foto.filename)
-    if not nome_img:
-        raise ValueError("Nome de arquivo de imagem inválido.")
-
-    pasta = os.path.join(
-        "static", "images", "fotos_perfil", "produtos"
-    )
-    os.makedirs(pasta, exist_ok=True)
-    foto.save(os.path.join(pasta, nome_img))
-    return f"images/fotos_perfil/produtos/{nome_img}"
+    # A foto é guardada no banco (a Vercel não permite gravar em disco).
+    return salvar_imagem(request.files.get("foto_produto"))
 
 
 @prato_bp.get("/gerenciar")
@@ -296,7 +290,15 @@ def editar(prato_id):
 def excluir(prato_id):
     if prato_model.buscar(prato_id) is None:
         abort(404)
-    prato_model.excluir(prato_id)
+    try:
+        prato_model.excluir(prato_id)
+    except IntegrityError:
+        # O produto já aparece em pedidos registrados.
+        flash(
+            "Este produto já foi usado em pedidos e não pode ser excluído.",
+            "erro"
+        )
+        return redirect(url_for("prato.listar"))
     flash("Produto excluído.", "sucesso")
     return redirect(url_for("prato.listar"))
 

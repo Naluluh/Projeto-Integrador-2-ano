@@ -1,8 +1,6 @@
-
-"""Rotas públicas de autenticação e cadastro de funcionários."""
+"""Rotas públicas de autenticação e cadastro de usuários."""
 
 from psycopg import IntegrityError
-import os
 
 from flask import (
     Blueprint,
@@ -19,12 +17,13 @@ from werkzeug.security import (
     generate_password_hash
 )
 
-from werkzeug.utils import secure_filename
-
+from models import perfil_chef_model
 from models import usuario_model as usuario_model
 from utils import administrador_required
-from utils import cozinheiro_required
-from utils import cliente_required
+from utils import salvar_imagem
+
+# Foto usada quando nenhuma imagem é enviada.
+FOTO_PADRAO = "images/fotos_perfil/usuarios/template_usuarios.jpeg"
 
 # Cria o Blueprint responsável pela autenticação.
 auth_bp = Blueprint("auth", __name__)
@@ -48,12 +47,12 @@ def login():
             ""
         )
 
-        # Procura o funcionário no banco.
+        # Procura o usuário no banco.
         usuario = usuario_model.buscar_por_usuario(
             nome_usuario
         )
 
-        # Verifica se o funcionário existe
+        # Verifica se o usuário existe
         # e se a senha está correta.
         if (
             usuario
@@ -66,7 +65,7 @@ def login():
             # Remove dados antigos da sessão.
             session.clear()
 
-            # Guarda o ID do funcionário.
+            # Guarda o ID do usuário.
             session["usuario_id"] = usuario["id"]
 
             # Guarda o nome para exibição.
@@ -74,6 +73,16 @@ def login():
 
             # Guarda o cargo para controle de permissões.
             session["cargo"] = usuario["cargo"]
+
+            # Cozinheiro cadastrado pelo administrador ainda não tem perfil:
+            # leva direto para o cadastro do perfil.
+            if (
+                usuario["cargo"] == "cozinheiro"
+                and perfil_chef_model.perfil_id(usuario["id"]) is None
+            ):
+                return redirect(
+                    url_for("perfil_chef.cadastrar")
+                )
 
             # Vai para o painel principal.
             return redirect(
@@ -90,134 +99,126 @@ def login():
     return render_template("login.html")
 
 
+def _cadastrar_usuario(cargos_permitidos, template):
+    """Valida o formulário e cria o usuário.
+
+    Usada pelo cadastro público e pelo cadastro feito pelo administrador.
+    """
+
+    if request.method != "POST":
+        return render_template(template)
+
+    # Obtém os dados enviados.
+    nome = request.form.get(
+        "nome",
+        ""
+    ).strip()
+
+    nome_usuario = request.form.get(
+        "usuario",
+        ""
+    ).strip()
+
+    senha = request.form.get(
+        "senha",
+        ""
+    )
+
+    cargo = request.form.get(
+        "cargo",
+        ""
+    ).strip()
+
+    # Validação básica dos campos.
+    if (
+        len(nome) < 2
+        or len(nome_usuario) < 3
+        or len(senha) < 6
+        or cargo not in cargos_permitidos
+    ):
+        flash(
+            "Preencha todos os campos corretamente.",
+            "erro"
+        )
+
+        return render_template(template)
+
+    try:
+
+        # A foto é guardada no banco (a Vercel não permite gravar em disco).
+        foto_url = salvar_imagem(
+            request.files.get("foto_perfil")
+        ) or FOTO_PADRAO
+
+        # Transforma a senha em hash
+        # antes de armazená-la.
+        senha_hash = generate_password_hash(
+            senha
+        )
+
+        # Cria o usuário.
+        usuario_id = usuario_model.criar(
+            nome,
+            nome_usuario,
+            senha_hash,
+            cargo,
+            foto_url
+        )
+
+    except ValueError as erro:
+
+        # Imagem inválida.
+        flash(
+            str(erro),
+            "erro"
+        )
+
+        return render_template(template)
+
+    except IntegrityError:
+
+        # O usuário possui uma restrição UNIQUE.
+        flash(
+            "Esse nome de usuário já está em uso.",
+            "erro"
+        )
+
+        return render_template(template)
+
+    return usuario_id, cargo
+
+
 @auth_bp.route(
     "/cadastro",
     methods=("GET", "POST")
 )
 def cadastro():
 
-    # Verifica se o formulário foi enviado.
-    if request.method == "POST":
+    resultado = _cadastrar_usuario(
+        {"cliente", "cozinheiro"},
+        "cadastro_usuario.html"
+    )
 
-        foto = request.files.get("foto_perfil", '')
+    # Formulário (GET) ou erro de validação: já é uma resposta.
+    if not isinstance(resultado, tuple):
+        return resultado
 
-        foto_url = 'images/fotos_perfil/usuarios/template_usuarios.jpeg'
+    usuario_id, cargo = resultado
 
-        if foto and foto.filename:
-            nome_img = secure_filename(foto.filename)
+    # Entra automaticamente com a conta recém-criada.
+    session.clear()
 
-            pasta = os.path.join(
-                "static",
-                "images",
-                "fotos_perfil",
-                "usuarios"
-            )
+    session["usuario_id"] = usuario_id
+    session["usuario_nome"] = request.form.get("nome", "").strip()
+    session["cargo"] = cargo
 
-            os.makedirs(pasta, exist_ok=True)
-
-            foto.save(os.path.join(pasta, nome_img))
-            foto_url = f'images/fotos_perfil/usuarios/{nome_img}'
-
-        # Obtém os dados enviados.
-        nome = request.form.get(
-            "nome",
-            ""
-        ).strip()
-
-        nome_usuario = request.form.get(
-            "usuario",
-            ""
-        ).strip()
-
-        senha = request.form.get(
-            "senha",
-            ""
+    if cargo == "cliente":
+        return redirect(
+            url_for("endereco.cadastrar")
         )
 
-        cargo = request.form.get(
-            "cargo",
-            ""
-        ).strip()
-
-        # Tipos de usuário permitidos
-        # no cadastro público.
-        cargos_publicos = {
-            "cliente",
-            "cozinheiro"
-        }
-
-        # Validação básica dos campos.
-        if (
-            len(nome) < 2
-            or len(nome_usuario) < 3
-            or len(senha) < 6
-            or cargo not in cargos_publicos
-        ):
-            flash(
-                "Preencha todos os campos corretamente.",
-                "erro"
-            )
-
-        else:
-
-            try:
-
-                # Transforma a senha em hash
-                # antes de armazená-la.
-                senha_hash = generate_password_hash(
-                    senha
-                )
-
-                # Cria o funcionário.
-                usuario_id = usuario_model.criar(
-                    nome,
-                    nome_usuario,
-                    senha_hash,
-                    cargo,
-                    foto_url
-                )
-
-                if cargo == "cliente":
-
-                    session.clear()
-
-                    session["usuario_id"] = usuario_id
-                    session["usuario_nome"] = nome
-                    session["cargo"] = cargo
-
-                    return redirect(
-                        url_for("endereco.cadastrar")
-                    )
-
-                elif cargo == "cozinheiro":
-                    session.clear()
-                    session["usuario_id"] = usuario_id
-                    session["usuario_nome"] = nome
-                    session["cargo"] = cargo
-
-                    return redirect(
-                        url_for("perfil_chef.cadastrar")
-                    )
-
-                flash(
-                    "Cadastro realizado. Agora faça o login.",
-                    "sucesso"
-                )
-
-                return redirect(
-                    url_for("auth.login")
-                )
-
-            except IntegrityError:
-
-                # O usuário possui uma restrição UNIQUE.
-                flash(
-                    "Esse nome de usuário já está em uso.",
-                    "erro"
-                )
-
-    return render_template(
-        "cadastro_usuario.html"
+    return redirect(
+        url_for("perfil_chef.cadastrar")
     )
 
 
@@ -228,119 +229,38 @@ def cadastro():
 @administrador_required
 def cadastro_adm():
 
-    # Verifica se o formulário foi enviado.
-    if request.method == "POST":
+    resultado = _cadastrar_usuario(
+        {"cliente", "cozinheiro", "administrador"},
+        "adm_cadastro_usuario.html"
+    )
 
-        foto = request.files.get("foto_perfil", '')
+    # Formulário (GET) ou erro de validação: já é uma resposta.
+    if not isinstance(resultado, tuple):
+        return resultado
 
-        foto_url = 'images/fotos_perfil/usuarios/template_usuarios.jpeg'
+    usuario_id, cargo = resultado
 
-        if foto and foto.filename:
-            nome_img = secure_filename(foto.filename)
+    # Mantém o comportamento original: cliente criado por aqui
+    # assume a sessão e segue para o cadastro de endereço.
+    if cargo == "cliente":
 
-            pasta = os.path.join(
-                "static",
-                "images",
-                "fotos_perfil",
-                "usuarios"
-            )
+        session.clear()
 
-            os.makedirs(pasta, exist_ok=True)
+        session["usuario_id"] = usuario_id
+        session["usuario_nome"] = request.form.get("nome", "").strip()
+        session["cargo"] = cargo
 
-            foto.save(os.path.join(pasta, nome_img))
-            foto_url = f'images/fotos_perfil/usuarios/{nome_img}'
-
-        # Obtém os dados enviados.
-        nome = request.form.get(
-            "nome",
-            ""
-        ).strip()
-
-        nome_usuario = request.form.get(
-            "usuario",
-            ""
-        ).strip()
-
-        senha = request.form.get(
-            "senha",
-            ""
+        return redirect(
+            url_for("endereco.cadastrar")
         )
 
-        cargo = request.form.get(
-            "cargo",
-            ""
-        ).strip()
+    flash(
+        "Novo usuário cadastrado.",
+        "sucesso"
+    )
 
-        # Tipos de usuário permitidos
-        # no cadastro administrativo.
-        cargos_publicos = {
-            "cliente",
-            "cozinheiro",
-            "administrador"
-        }
-
-        # Validação básica dos campos.
-        if (
-            len(nome) < 2
-            or len(nome_usuario) < 3
-            or len(senha) < 6
-            or cargo not in cargos_publicos
-        ):
-            flash(
-                "Preencha todos os campos corretamente.",
-                "erro"
-            )
-
-        else:
-
-            try:
-
-                # Transforma a senha em hash
-                # antes de armazená-la.
-                senha_hash = generate_password_hash(
-                    senha
-                )
-
-                # Cria o funcionário.
-                usuario_id = usuario_model.criar(
-                    nome,
-                    nome_usuario,
-                    senha_hash,
-                    cargo,
-                    foto_url
-                )
-
-                if cargo == "cliente":
-
-                    session.clear()
-
-                    session["usuario_id"] = usuario_id
-                    session["usuario_nome"] = nome
-                    session["cargo"] = cargo
-
-                    return redirect(
-                        url_for("endereco.cadastrar")
-                    )
-
-                flash(
-                    "Novo usuário cadastrado.",
-                    "sucesso"
-                )
-
-                return redirect(
-                    url_for("main.inicio")
-                )
-
-            except IntegrityError:
-
-                # O usuário possui uma restrição UNIQUE.
-                flash(
-                    "Esse nome de usuário já está em uso.",
-                    "erro"
-                )
-
-    return render_template(
-        "adm_cadastro_usuario.html"
+    return redirect(
+        url_for("main.inicio")
     )
 
 

@@ -13,9 +13,7 @@ from flask import (
 
 from models import prato_model as prato_model
 from models.categorias_model import *
-from utils import gestor_required
-import os
-from werkzeug.utils import secure_filename
+from utils import gestor_required, salvar_imagem
 
 
 # Blueprint único para categorias e sua API
@@ -50,21 +48,12 @@ def criar_categoria_api():
         }), 400
     
     img_url = 'images/fotos_perfil/categorias/template_categorias.jpeg'
-    
-    if img and img.filename:
-        nome_img = secure_filename(img.filename)
 
-        pasta = os.path.join(
-            "static",
-            "images",
-            "fotos_perfil",
-            "categorias"
-        )
-
-        os.makedirs(pasta, exist_ok=True)
-
-        img.save(os.path.join(pasta, nome_img))
-        img_url = f'images/fotos_perfil/categorias/{nome_img}'
+    try:
+        # A foto é guardada no banco (a Vercel não permite gravar em disco).
+        img_url = salvar_imagem(img) or img_url
+    except ValueError as e:
+        return jsonify({"mensagem": str(e)}), 400
 
     try:
         categoria_id = criar_categoria(nome, img_url)
@@ -78,19 +67,15 @@ def criar_categoria_api():
 def main():
     return render_template('menu_categorias.html', categorias=pegar_categorias())
 
-# Exibe os chefs vinculados a uma categoria específica
-@categorias_bp.get('/<categoria>')
+# Exibe os produtos de uma categoria específica
+@categorias_bp.get('/<int:categoria>')
 def exibir(categoria):
-    print("CATEGORIA RECEBIDA:", repr(categoria))
-
     produtos = mostrar_produtos(categoria)
-
-    print("PRODUTOS ENCONTRADOS:", produtos)
 
     return render_template(
         'categoria_esp.html',
         categoria=categoria,
-        categoria_id=int(categoria),
+        categoria_id=categoria,
         produtos=produtos,
         nome=nome_categoria(categoria)
     )

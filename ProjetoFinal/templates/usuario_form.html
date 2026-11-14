@@ -43,7 +43,7 @@
                             {{ usuario["cargo"]|capitalize }}
                         </td>
 
-                        <td>{{ usuario["criado_em"] }}</td>
+                        <td>{{ usuario["criado_em"]|datahora }}</td>
                     </tr>
 
                 {% endfor %}

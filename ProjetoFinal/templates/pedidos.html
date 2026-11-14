@@ -68,7 +68,7 @@ Pedidos
 
                     <td>#{{ p.id }}</td>
 
-                    <td>{{ p.criado_em }}</td>
+                    <td>{{ p.criado_em|datahora }}</td>
 
                     {% if cargo in ["administrador", "cozinheiro"] %}
                         <td>{{ p.usuario_nome }}</td>

@@ -4,7 +4,7 @@ from flask import Flask, redirect, render_template, request, session, url_for
 
 from config import Config
 from database import init_app as init_database
-from utils import formatar_moeda
+from utils import formatar_moeda, formatar_datahora, url_foto
 from blueprints_register import registrar_blueprints
 
 
@@ -24,6 +24,13 @@ def create_app(test_config=None):
     
     # Cria o filtro Jinja |moeda para exibir valores em reais.
     app.jinja_env.filters["moeda"] = formatar_moeda
+
+    # Cria o filtro Jinja |datahora para exibir datas no horário de Brasília.
+    app.jinja_env.filters["datahora"] = formatar_datahora
+
+    # Função Jinja foto_src(...) para exibir imagens (arquivos da pasta
+    # static ou fotos enviadas pelos usuários, guardadas no banco).
+    app.jinja_env.globals["foto_src"] = url_foto
 
     # Middleware executado antes de cada requisição.
     @app.before_request
@@ -53,7 +60,9 @@ def create_app(test_config=None):
     def pagina_nao_encontrada(_erro):
         return render_template("404.html"), 404
 
-    # Inicializa o banco de dados e cria as tabelas necessárias.
+    # Registra o fechamento da conexão com o banco ao fim de cada requisição.
+    # As tabelas são criadas sob demanda (ver database.get_db), e não mais
+    # ao importar o app, para não atrasar nem derrubar o carregamento.
     init_database(app)
 
     return app

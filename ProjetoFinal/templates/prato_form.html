@@ -18,7 +18,7 @@
         <div>
             <p>Foto atual:</p>
             <img
-                src="{{ url_for('static', filename=prato.foto_url) }}"
+                src="{{ foto_src(prato.foto_url) }}"
                 alt="Foto atual do prato"
                 style="max-width: 180px;"
             >

@@ -1,4 +1,5 @@
 """Conexão PostgreSQL/Neon e criação do esquema do Sabor & Clic."""
+import os
 import re
 from flask import current_app, g
 from psycopg import connect
@@ -72,9 +73,13 @@ CREATE TABLE IF NOT EXISTS perfis_categorias (
  perfil_id BIGINT NOT NULL REFERENCES perfis(id) ON DELETE CASCADE,
  PRIMARY KEY(categoria_id, perfil_id)
 );
+CREATE TABLE IF NOT EXISTS imagens (
+ id BIGSERIAL PRIMARY KEY, tipo TEXT NOT NULL, dados BYTEA NOT NULL,
+ criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 '''
 
-_ID_TABLES = {'usuarios','categorias','produtos','enderecos','ingredientes','pedidos','itens_pedido','perfis'}
+_ID_TABLES = {'usuarios','categorias','produtos','enderecos','ingredientes','pedidos','itens_pedido','perfis','imagens'}
 
 class CursorCompat:
     def __init__(self, cursor, lastrowid=None):
@@ -111,13 +116,37 @@ class ConnectionCompat:
     def close(self): self.conn.close()
 
 
+# Tabela usada como "marcador": se ela existe, o esquema já foi criado.
+# Ao adicionar tabelas novas no futuro, mantenha a mais recente no fim do
+# SCHEMA e atualize este marcador.
+_TABELA_MARCADOR = 'imagens'
+
+# Na Vercel cada instância é um processo novo (cold start). Esta flag evita
+# repetir a verificação do esquema a cada requisição da mesma instância.
+_esquema_pronto = False
+
+
 def get_db():
+    global _esquema_pronto
     if 'db' not in g:
         url = current_app.config.get('DATABASE_URL')
         if not url:
             raise RuntimeError('DATABASE_URL não foi configurada. Cadastre a connection string do Neon nas variáveis de ambiente.')
         # Neon fornece URLs postgres:// ou postgresql://; psycopg aceita ambas.
-        g.db = ConnectionCompat(connect(url, row_factory=dict_row, connect_timeout=10))
+        # prepare_threshold=None desliga prepared statements, evitando
+        # problemas com o pooler (PgBouncer) do Neon.
+        conexao = ConnectionCompat(connect(
+            url, row_factory=dict_row, connect_timeout=10,
+            prepare_threshold=None
+        ))
+        try:
+            if not _esquema_pronto:
+                _garantir_esquema(conexao)
+                _esquema_pronto = True
+        except Exception:
+            conexao.close()
+            raise
+        g.db = conexao
     return g.db
 
 
@@ -126,18 +155,37 @@ def close_db(_error=None):
     if db is not None: db.close()
 
 
-def init_db():
-    db = get_db()
-    db.executescript(SCHEMA)
+def _garantir_esquema(db):
+    """Cria as tabelas somente se ainda não existirem.
+
+    Roda uma única vez por instância, na primeira consulta ao banco, e não
+    mais ao importar o app: assim a tela de login não depende do banco e um
+    Neon "dormindo" não derruba o carregamento da função.
+    """
+    # Lock de transação: se duas instâncias subirem juntas, uma espera a outra
+    # terminar (evita erro de "tabela já existe" em criações simultâneas).
+    db.conn.execute('SELECT pg_advisory_xact_lock(727001)')
+    existe = db.conn.execute(
+        'SELECT to_regclass(%s::text) IS NOT NULL AS existe', (_TABELA_MARCADOR,)
+    ).fetchone()['existe']
+    if not existe:
+        db.executescript(SCHEMA)
+
     usuario = db.execute('SELECT 1 FROM usuarios LIMIT 1').fetchone()
     if not usuario:
+        senha_inicial = os.environ.get('ADMIN_SENHA_INICIAL') or 'admin123'
         db.execute('''INSERT INTO usuarios (nome, usuario, senha_hash, cargo)
                       VALUES (?, ?, ?, ?)''',
-                   ('Administrador', 'admin', generate_password_hash('admin123'), 'administrador'))
+                   ('Administrador', 'admin', generate_password_hash(senha_inicial), 'administrador'))
     db.commit()
+
+
+def init_db():
+    """Força a criação do esquema (uso manual, por exemplo em scripts)."""
+    global _esquema_pronto
+    _esquema_pronto = False
+    get_db()
 
 
 def init_app(app):
     app.teardown_appcontext(close_db)
-    with app.app_context():
-        init_db()

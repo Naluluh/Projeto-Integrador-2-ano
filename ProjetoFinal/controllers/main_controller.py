@@ -1,9 +1,11 @@
 """Página inicial da área autenticada."""
 
-from flask import Blueprint, render_template, session
+from flask import Blueprint, Response, abort, render_template, session
 
+from models import imagem_model
 from models import ingrediente_model
 from models import pedido_model
+from models import prato_model
 
 
 # Blueprint da página inicial.
@@ -18,6 +20,7 @@ def inicio():
 
     # Obtém as quantidades para o painel.
     total_ingredientes = ingrediente_model.quantidade_total()
+    total_pratos = prato_model.quantidade_total()
     total_pedidos=pedido_model.quantidade_visivel(
     session.get("cargo"),
     session.get("usuario_id")
@@ -31,6 +34,7 @@ def inicio():
         return render_template(
             "menu_cliente.html",
             total_ingredientes=total_ingredientes,
+            total_pratos=total_pratos,
             total_pedidos=total_pedidos
         )
 
@@ -39,6 +43,7 @@ def inicio():
         return render_template(
             "menu_cozinheiro.html",
             total_ingredientes=total_ingredientes,
+            total_pratos=total_pratos,
             total_pedidos=total_pedidos
         )
 
@@ -47,8 +52,29 @@ def inicio():
         return render_template(
             "menu_adm.html",
             total_ingredientes=total_ingredientes,
+            total_pratos=total_pratos,
             total_pedidos=total_pedidos
         )
 
     # Cargo desconhecido.
     return "Cargo de usuário inválido.", 403
+
+
+@main_bp.get("/imagem/<int:imagem_id>")
+def imagem(imagem_id):
+    """Entrega uma foto enviada por usuário (guardada no banco)."""
+
+    linha = imagem_model.buscar(imagem_id)
+
+    if linha is None:
+        abort(404)
+
+    resposta = Response(
+        bytes(linha["dados"]),
+        mimetype=linha["tipo"]
+    )
+
+    resposta.headers["Cache-Control"] = "private, max-age=86400"
+    resposta.headers["X-Content-Type-Options"] = "nosniff"
+
+    return resposta

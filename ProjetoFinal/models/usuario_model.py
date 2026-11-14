@@ -8,7 +8,7 @@ def buscar_por_usuario(usuario):
     # Procura um funcionário pelo nome de usuário.
     # permite ignorar maiúsculas e minúsculas.
     return get_db().execute(
-        "SELECT * FROM usuarios WHERE usuario = ?",
+        "SELECT * FROM usuarios WHERE LOWER(usuario) = LOWER(?)",
         (usuario,)
     ).fetchone()
 
@@ -144,8 +144,14 @@ def atualizar(
 def excluir(usuario_id):
     db = get_db()
 
-    # perfis_categorias é apagada em cascata junto com o perfil.
-    db.execute("DELETE FROM perfis WHERE usuario_id = ?", (usuario_id,))
-    db.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
+    try:
+        # perfis_categorias é apagada em cascata junto com o perfil.
+        db.execute("DELETE FROM perfis WHERE usuario_id = ?", (usuario_id,))
+        db.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
 
-    db.commit()
+        db.commit()
+
+    except Exception:
+        # Ex.: usuário com pedidos registrados (chave estrangeira).
+        db.rollback()
+        raise

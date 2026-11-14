@@ -11,7 +11,7 @@
 
     <a href="{{ url_for(
         'prato.catalogo_categoria',
-        categoria_id=prato.id
+        categoria_id=prato.categoria_id
     ) }}">
         ← Voltar ao cardápio
     </a>
@@ -19,7 +19,7 @@
     <h1>{{ prato.nome }}</h1>
 
     <img
-        src="{{ prato.imagem }}"
+        src="{{ foto_src(prato.foto_url, 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
         alt="{{ prato.nome }}"
         style="width: 100%; max-width: 500px;"
     >
@@ -31,17 +31,15 @@
     <h2>Ingredientes</h2>
 
     <ul>
-        {% for ingrediente in prato.ingredientes %}
-            <li>{{ ingrediente }}</li>
+        {% for ingrediente in ingredientes %}
+            <li>{{ ingrediente.nome }} — {{ ingrediente.quantidade }} {{ ingrediente.unidade }}</li>
         {% endfor %}
     </ul>
 
     <h2>Preço</h2>
 
     <p>
-        R$ {{ "%.2f"|format(
-            prato.preco_centavos / 100
-        ) }}
+        {{ prato.preco_centavos|moeda }}
     </p>
 
     <form
@@ -51,8 +49,21 @@
 
         <input
             type="hidden"
-            name="prato_id"
+            name="produto_id"
             value="{{ prato.id }}"
+        >
+
+        <label for="quantidade">
+            Quantidade:
+        </label>
+
+        <input
+            type="number"
+            id="quantidade"
+            name="quantidade"
+            min="1"
+            value="1"
+            required
         >
 
         <button type="submit">

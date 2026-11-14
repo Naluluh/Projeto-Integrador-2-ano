@@ -80,6 +80,13 @@ def listar_por_categoria(categoria_id):
     """, (categoria_id,)).fetchall()
 
 
+def quantidade_total():
+    # Conta quantos pratos estão cadastrados (painel inicial).
+    return get_db().execute(
+        "SELECT COUNT(*) AS total FROM produtos"
+    ).fetchone()["total"]
+
+
 def listar_categorias():
     return get_db().execute("""
         SELECT id, nome, foto_url
@@ -118,7 +125,8 @@ def listar_ingredientes(produto_id):
         LEFT JOIN ingredientes AS ia
             ON ia.id = pia.ingrediente_alternativo_id
         WHERE pi.produto_id = ?
-        GROUP BY pi.produto_id, pi.ingrediente_id
+        GROUP BY pi.produto_id, pi.ingrediente_id, pi.quantidade,
+                 i.nome, i.unidade
         ORDER BY i.nome
     """, (produto_id,)).fetchall()
 

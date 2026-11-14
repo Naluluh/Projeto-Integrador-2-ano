@@ -12,14 +12,13 @@ from flask import (
     url_for
 )
 
-import os
-from werkzeug.utils import secure_filename
+from psycopg import IntegrityError
 
 from werkzeug.security import generate_password_hash
 
 from models import usuario_model as usuario_model
-from models import perfil_chef_model 
 from utils import administrador_required
+from utils import salvar_imagem
 
 
 # Cria o Blueprint responsável pelas rotas de funcionários.
@@ -49,29 +48,8 @@ def listar():
 @administrador_required
 def novo():
 
-    usuario_id = session["usuario_id"]
-    
     # Se o formulário foi enviado.
     if request.method == "POST":
-
-        foto = request.files.get("foto_perfil")
-        foto_url = "images/fotos_perfil/usuarios/template_usuarios.jpeg"
-
-        if foto and foto.filename:
-            nome_img = secure_filename(foto.filename)
-
-            pasta = os.path.join(
-                "static",
-                "images",
-                "fotos_perfil",
-                "usuarios"
-            )
-
-            os.makedirs(pasta, exist_ok=True)
-
-            foto.save(os.path.join(pasta, nome_img))
-
-            foto_url = f"images/fotos_perfil/usuarios/{nome_img}"
 
         # Obtém os dados enviados pelo formulário.
         nome = request.form.get(
@@ -118,6 +96,12 @@ def novo():
 
             try:
 
+                # A foto é guardada no banco (a Vercel não permite
+                # gravar arquivos em disco).
+                foto_url = salvar_imagem(
+                    request.files.get("foto_perfil")
+                ) or "images/fotos_perfil/usuarios/template_usuarios.jpeg"
+
                 # Transforma a senha em hash
                 # antes de armazená-la.
                 senha_hash = generate_password_hash(
@@ -138,9 +122,7 @@ def novo():
                     "sucesso"
                 )
 
-                if cargo == "cozinheiro" and perfil_chef_model.usuario_id(usuario_id) is None:
-                    return redirect(url_for("perfil_chef.cadastrar"))
-
+                # O cozinheiro cadastra o próprio perfil no primeiro login.
                 return redirect(
                     url_for("usuario.listar")
                 )
@@ -151,6 +133,14 @@ def novo():
                 # retornados pelo Model.
                 flash(
                     str(erro),
+                    "erro"
+                )
+
+            except IntegrityError:
+
+                # O nome de usuário já existe (restrição UNIQUE).
+                flash(
+                    "Esse nome de usuário já está em uso.",
                     "erro"
                 )
 
@@ -180,25 +170,6 @@ def editar(usuario_id):
 
     # Se o formulário foi enviado.
     if request.method == "POST":
-
-        foto = request.files.get("foto_perfil")
-        foto_url = None
-
-        if foto and foto.filename:
-            nome_img = secure_filename(foto.filename)
-
-            pasta = os.path.join(
-                "static",
-                "images",
-                "fotos_perfil",
-                "usuarios"
-            )
-
-            os.makedirs(pasta, exist_ok=True)
-
-            foto.save(os.path.join(pasta, nome_img))
-
-            foto_url = f"images/fotos_perfil/usuarios/{nome_img}"
 
         # Obtém os dados enviados.
         nome = request.form.get(
@@ -242,6 +213,11 @@ def editar(usuario_id):
         else:
 
             try:
+
+                # Nova foto (opcional), guardada no banco.
+                foto_url = salvar_imagem(
+                    request.files.get("foto_perfil")
+                )
 
                 # Se uma nova senha foi informada,
                 # cria um novo hash.
@@ -289,6 +265,14 @@ def editar(usuario_id):
                     "erro"
                 )
 
+            except IntegrityError:
+
+                # O nome de usuário já existe (restrição UNIQUE).
+                flash(
+                    "Esse nome de usuário já está em uso.",
+                    "erro"
+                )
+
         # Exibe novamente o formulário.
         return render_template(
             "usuario_form.html",
@@ -332,9 +316,22 @@ def excluir(usuario_id):
         )
 
     # Remove o funcionário do banco.
-    usuario_model.excluir(
-        usuario_id
-    )
+    try:
+        usuario_model.excluir(
+            usuario_id
+        )
+
+    except IntegrityError:
+
+        # O usuário possui pedidos registrados.
+        flash(
+            "Este usuário possui pedidos registrados e não pode ser excluído.",
+            "erro"
+        )
+
+        return redirect(
+            url_for("usuario.listar")
+        )
 
     flash(
         "Funcionário excluído com sucesso.",

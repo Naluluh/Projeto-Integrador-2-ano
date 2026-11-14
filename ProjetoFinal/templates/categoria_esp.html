@@ -37,10 +37,7 @@
             >
                 <img
                     class="foto-perfil"
-                    src="{{ url_for(
-                        'static',
-                        filename=t['foto_url'] or 'images/fotos_perfil/produtos/template_produtos.jpeg'
-                    ) }}"
+                    src="{{ foto_src(t['foto_url'], 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
                     alt="{{ t['nome'] }}"
                 >
             </button>

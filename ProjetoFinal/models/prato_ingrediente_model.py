@@ -14,7 +14,7 @@ def listar_por_prato(produto_id):
             i.nome,
             i.unidade,
             i.estoque
-        FROM prato_ingredientes pi
+        FROM produto_ingredientes pi
         JOIN ingredientes i
             ON i.id = pi.ingrediente_id
         WHERE pi.produto_id = ?
@@ -31,7 +31,7 @@ def adicionar(produto_id, ingrediente_id, quantidade):
     # Cria a relação entre prato e ingrediente.
     db.execute(
         """
-        INSERT INTO prato_ingredientes
+        INSERT INTO produto_ingredientes
             (produto_id, ingrediente_id, quantidade)
         VALUES (?, ?, ?)
         """,
@@ -49,7 +49,7 @@ def remover(produto_id, ingrediente_id):
     # Remove a relação entre o prato e o ingrediente.
     db.execute(
         """
-        DELETE FROM prato_ingredientes
+        DELETE FROM produto_ingredientes
         WHERE produto_id = ? AND ingrediente_id = ?
         """,
         (produto_id, ingrediente_id)

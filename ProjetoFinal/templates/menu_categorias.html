@@ -16,7 +16,7 @@ Categorias
         {%for u in categorias%}
             <section class="auth-card">
                 <a href="{{url_for('categorias.exibir', categoria=u['id'])}}"><img class="foto-perfil"
-                src="{{ url_for('static', filename=u['foto_url'] or 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"></a>
+                src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"></a>
                 <h2>{{u['nome']}}</h2>
             </section>
         {%endfor%}

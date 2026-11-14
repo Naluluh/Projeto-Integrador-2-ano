@@ -18,34 +18,21 @@ Cardápio | Sabor & Clic
 
         {% for categoria in categorias %}
         <a href="{{ url_for(
-        'pratos.catalogo_categoria',
-        categoria_id=categoria.id
-    ) }}">
+            'prato.catalogo_categoria',
+            categoria_id=categoria.id
+        ) }}">
             {{ categoria.nome }}
         </a>
         {% endfor %}
 
     </div>
 
-    {% if pratos.disponivel %}
-
-    <span class="disponivel">
-        Disponível
-    </span>
-
-    {% else %}
-
-    <span class="indisponivel">
-        Indisponível
-    </span>
-
-    {% endif %}
     <!-- Lista de pratos -->
     <h2>
         {% if categoria_atual %}
-        Pratos de {{ categoria_atual|capitalize }}
+        Pratos desta categoria
         {% else %}
-        Todos os pratos
+        Escolha uma categoria para ver os pratos
         {% endif %}
     </h2>
 
@@ -57,30 +44,45 @@ Cardápio | Sabor & Clic
 
             <!-- Thumbnail clicável -->
             <a href="{{ url_for(
-                    'pratos.detalhes',
-                    pratos_id=pratos.id
+                    'prato.detalhes',
+                    prato_id=prato.id
                 ) }}">
 
-                <img src="{{ pratos.imagem }}" alt="{{ pratos.nome }}">
+                <img
+                    src="{{ foto_src(prato.foto_url, 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
+                    alt="{{ prato.nome }}"
+                >
 
             </a>
 
             <div class="pratos-conteudo">
 
-                <h3>{{ pratos.nome }}</h3>
+                <h3>{{ prato.nome }}</h3>
 
-                <p>{{ pratos.descricao }}</p>
+                <p>{{ prato.descricao }}</p>
 
                 <p class="preco">
-                    R$ {{ "%.2f"|format(
-                    pratos.preco_centavos / 100
-                    ) }}
+                    {{ prato.preco_centavos|moeda }}
                 </p>
+
+                {% if prato.disponivel %}
+
+                <span class="disponivel">
+                    Disponível
+                </span>
+
+                {% else %}
+
+                <span class="indisponivel">
+                    Indisponível
+                </span>
+
+                {% endif %}
 
                 <!-- Ver detalhes -->
                 <a class="botao" href="{{ url_for(
-                            'pratos.detalhes',
-                            pratos_id=pratos.id
+                            'prato.detalhes',
+                            prato_id=prato.id
                         ) }}">
                     Ver detalhes
                 </a>
@@ -88,9 +90,22 @@ Cardápio | Sabor & Clic
                 <!-- Adicionar ao carrinho -->
                 <form method="POST" action="{{ url_for('pedido.adicionar') }}">
 
-                    <input type="hidden" name="pratos_id" value="{{ pratos.id }}">
+                    <input type="hidden" name="produto_id" value="{{ prato.id }}">
 
-                    {% if pratos.disponivel %}
+                    {% if prato.disponivel %}
+
+                    <label for="quantidade_{{ prato.id }}">
+                        Quantidade:
+                    </label>
+
+                    <input
+                        type="number"
+                        id="quantidade_{{ prato.id }}"
+                        name="quantidade"
+                        min="1"
+                        value="1"
+                        required
+                    >
 
                     <button type="submit">
                         Adicionar ao pedido
@@ -112,7 +127,9 @@ Cardápio | Sabor & Clic
 
         {% else %}
 
+        {% if categoria_atual %}
         <p>Nenhum prato disponível nesta categoria.</p>
+        {% endif %}
 
         {% endfor %}
 

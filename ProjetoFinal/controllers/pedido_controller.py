@@ -24,6 +24,7 @@ from models import endereco_model
 from controllers import categorias_controller
 
 from utils import (
+    formatar_datahora,
     administrador_required,
     cliente_required,
     gestor_required,
@@ -147,7 +148,7 @@ def adicionar():
             "erro"
         )
 
-        return redirect(url_for("pedidos.novo"))
+        return redirect(url_for("pedido.novo"))
 
     # Exige que um cozinheiro tenha sido selecionado.
     chef_id = session.get("chef_id")
@@ -508,7 +509,7 @@ def exportar():
 
         ws.append([
             pedido["id"],
-            pedido["criado_em"],
+            formatar_datahora(pedido["criado_em"]),
             pedido["usuario_nome"],
             pedido["chef_nome"] or "Não informado",
             pedido["status"],
