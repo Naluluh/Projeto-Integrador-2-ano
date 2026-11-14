@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Editar endereço
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="auth-card">
+
+    <h1>
+        Editar endereço
+    </h1>
+
+    <form method="post" class="formulario formulario--linhas">
+
+        <label for="cep">
+            CEP
+        </label>
+
+        <input
+            type="text"
+            id="cep"
+            name="cep"
+            value="{{ endereco['cep'] }}"
+            maxlength="9"
+            required
+        >
+
+
+        <label for="logradouro">
+            Logradouro
+        </label>
+
+        <input
+            type="text"
+            id="logradouro"
+            name="logradouro"
+            value="{{ endereco['logradouro'] }}"
+            required
+        >
+
+
+        <label for="numero">
+            Número
+        </label>
+
+        <input
+            type="text"
+            id="numero"
+            name="numero"
+            value="{{ endereco['numero'] }}"
+            required
+        >
+
+
+        <label for="complemento">
+            Complemento
+        </label>
+
+        <input
+            type="text"
+            id="complemento"
+            name="complemento"
+            value="{{ endereco['complemento'] or '' }}"
+        >
+
+
+        <label for="bairro">
+            Bairro
+        </label>
+
+        <input
+            type="text"
+            id="bairro"
+            name="bairro"
+            value="{{ endereco['bairro'] }}"
+            required
+        >
+
+
+        <label for="cidade">
+            Cidade
+        </label>
+
+        <input
+            type="text"
+            id="cidade"
+            name="cidade"
+            value="{{ endereco['cidade'] }}"
+            required
+        >
+
+
+        <label for="estado">
+            Estado
+        </label>
+
+        <input
+            type="text"
+            id="estado"
+            name="estado"
+            value="{{ endereco['estado'] }}"
+            required
+        >
+
+
+        <label for="pais">
+            País
+        </label>
+
+        <input
+            type="text"
+            id="pais"
+            name="pais"
+            value="{{ endereco['pais'] }}"
+            required
+        >
+
+
+        <button
+            class="botao primario"
+            type="submit"
+        >
+            Salvar alterações
+        </button>
+
+    </form>
+
+</section>
+
+<script src="{{ url_for('static', filename='js/cep.js') }}"></script>
+
+{% endblock %}

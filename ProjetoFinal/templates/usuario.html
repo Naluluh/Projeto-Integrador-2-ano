@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Usuários - Sabor & Clic
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="pagina">
+
+    <div class="cabecalho-pagina">
+
+        <div>
+            <h1>Usuários cadastrados</h1>
+
+            <p>
+                Lista de usuários registrados no sistema.
+            </p>
+        </div>
+
+        <a href="{{ url_for('auth.cadastro_adm') }}" class="botao primario" id="novo_usuario">
+            Adicionar novo usuário
+        </a>
+
+    </div>
+
+    {% if usuarios %}
+
+        <div class="tabela-wrapper">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Usuário</th>
+                        <th>Cargo</th>
+                        <th>Data de cadastro</th>
+                        <th>Ações</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for usuario in usuarios %}
+
+                        <tr>
+
+                            <td>{{ usuario["id"] }}</td>
+
+                            <td>
+                                {{ usuario["nome"] }}
+
+                                {% if usuario["reset_solicitado_em"] %}
+                                    <br>
+                                    <span class="selo aviso">
+                                        Pediu nova senha
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>{{ usuario["usuario"] }}</td>
+
+                            <td>{{ usuario["cargo"]|capitalize }}</td>
+
+                            <td>{{ usuario["criado_em"]|datahora }}</td>
+
+                            <td class="acoes">
+
+                                <a class="botao botao--neutro botao--mini" href="{{ url_for('usuario.editar', usuario_id=usuario['id']) }}">
+                                    Editar
+                                </a>
+
+                                {% if usuario["id"] != session.get("usuario_id") %}
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for('usuario.redefinir_senha', usuario_id=usuario['id']) }}"
+                                        onsubmit="return confirm('Gerar uma senha temporária? A senha atual deixará de funcionar.')"
+                                    >
+                                        <button class="botao secundario botao--mini" type="submit">
+                                            Redefinir senha
+                                        </button>
+                                    </form>
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for('usuario.excluir', usuario_id=usuario['id']) }}"
+                                        onsubmit="return confirm('Excluir este usuário?')"
+                                    >
+                                        <button class="botao botao--perigo botao--mini" type="submit">
+                                            Excluir
+                                        </button>
+                                    </form>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div class="vazio">
+
+            <h2>Nenhum usuário cadastrado</h2>
+
+            <p>
+                Não existem usuários para exibir.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}
