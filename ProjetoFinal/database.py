@@ -103,7 +103,15 @@ class Resultado:
         self.rowcount = resultado.rowcount if rowcount is None else rowcount
 
         # ID do último INSERT (no Postgres vem do RETURNING)
-        self.lastrowid = lastrowid or getattr(resultado, "lastrowid", None)
+        # (só lê do driver em comandos sem linhas: no Postgres, ler isso num
+        # SELECT fecha o cursor e quebra o fetchone)
+        self.lastrowid = lastrowid
+
+        if self.lastrowid is None and not resultado.returns_rows:
+            try:
+                self.lastrowid = resultado.lastrowid
+            except Exception:
+                self.lastrowid = None
 
         if consumido or not resultado.returns_rows:
             self._linhas = None
