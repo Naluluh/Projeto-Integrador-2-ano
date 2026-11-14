@@ -17,6 +17,7 @@ import unicodedata
 
 from flask import current_app, g
 from sqlalchemy import create_engine, event, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 from werkzeug.security import generate_password_hash
@@ -66,7 +67,7 @@ def _configurar_conexao(conexao_dbapi, _registro):
 
 def criar_engine(url):
     # Postgres (Neon): sem pool, porque na Vercel cada requisição pode cair numa instância nova
-    if url.startswith("postgresql"):
+    if make_url(url).get_backend_name() == "postgresql":
         return create_engine(url, poolclass=NullPool)
 
     engine = create_engine(

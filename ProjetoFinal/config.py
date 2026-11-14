@@ -24,6 +24,9 @@ def _url_do_banco():
     # Na Vercel vem do Neon (DATABASE_URL). Local, usa SQLite se não definir.
     url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
 
+    # Tira espaços e aspas que sobram ao colar a URL no terminal (ex.: set X="...")
+    url = (url or "").strip().strip("\"'").strip()
+
     if not url:
         if NA_VERCEL:
             raise RuntimeError(
