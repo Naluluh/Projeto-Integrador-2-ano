@@ -1,4 +1,3 @@
-#categorias_controller
 
 from flask import (
     Blueprint,
@@ -17,7 +16,7 @@ from models.categorias_model import *
 from utils import gestor_required, salvar_imagem
 
 
-# Blueprint único para categorias e sua API
+# Blueprint de categorias e da API
 categorias_bp = Blueprint(
     "categorias",
     __name__,
@@ -25,24 +24,20 @@ categorias_bp = Blueprint(
 )
 
 
-# Rota da API para cadastro assíncrono de categoria via JavaScript (Fetch)
+# API para cadastrar categoria por JavaScript (Fetch)
 @categorias_bp.route("/api/categorias", methods=["POST"])
 @gestor_required 
 def criar_categoria_api():
-    # Recebe os dados enviados pelo JavaScript.
     dados = request.get_json(silent=True) or {}
 
-    # Obtém o nome da categoria.
     nome = (
         dados.get("nome")
         or request.form.get("nome")
         or ""
     ).strip()
 
-    # Obtém a imagem, caso tenha sido enviada.
     img = request.files.get("foto_categoria")
 
-    # Valida o nome.
     if not nome:
         return jsonify({
             "mensagem": "Informe o nome da categoria."
@@ -51,7 +46,7 @@ def criar_categoria_api():
     img_url = 'images/fotos_perfil/categorias/template_categorias.jpeg'
 
     try:
-        # A foto é guardada no banco (a Vercel não permite gravar em disco).
+        # Foto vai pro banco
         img_url = salvar_imagem(img) or img_url
     except ValueError as e:
         return jsonify({"mensagem": str(e)}), 400
@@ -63,15 +58,15 @@ def criar_categoria_api():
         return jsonify({"mensagem": str(e)}), 400
 
 
-# Página principal de listagem de categorias
+# Lista de categorias
 @categorias_bp.get('/')
 def main():
     return render_template('menu_categorias.html', categorias=pegar_categorias())
 
-# Exibe os produtos de uma categoria específica
+# Produtos de uma categoria
 @categorias_bp.get('/<int:categoria>')
 def exibir(categoria):
-    # Pratos indisponíveis só aparecem para o administrador.
+    # Prato indisponível só aparece para o admin
     produtos = mostrar_produtos(
         categoria,
         incluir_inativos=(session.get("cargo") == "administrador")

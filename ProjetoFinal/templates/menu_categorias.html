@@ -9,6 +9,7 @@ Categorias
 <div class="cabecalho-pagina">
     <div>
         <h1>Categorias</h1>
+        <p>Escolha uma categoria para ver os produtos e os cozinheiros.</p>
 
         {% if session.get('cargo') == 'cozinheiro' %}
             <p>
@@ -20,17 +21,33 @@ Categorias
     </div>
 </div>
 
-{% for u in categorias %}
-    <section class="auth-card">
-        <a href="{{ url_for('categorias.exibir', categoria=u['id']) }}">
-            <img
-                class="foto-perfil"
-                src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
-                alt="{{ u['nome'] }}"
+<section class="cards" aria-label="Categorias">
+
+    {% for u in categorias %}
+
+        <article class="card card--item">
+
+            <a
+                href="{{ url_for('categorias.exibir', categoria=u['id']) }}"
+                aria-label="Ver a categoria {{ u['nome'] }}"
             >
-        </a>
-        <h2>{{ u['nome'] }}</h2>
-    </section>
-{% endfor %}
+                <img
+                    class="foto-perfil"
+                    src="{{ foto_src(u['foto_url'], 'images/fotos_perfil/categorias/template_categorias.jpeg') }}"
+                    alt=""
+                >
+            </a>
+
+            <h2>{{ u['nome'] }}</h2>
+
+        </article>
+
+    {% else %}
+
+        <p class="vazio">Nenhuma categoria cadastrada.</p>
+
+    {% endfor %}
+
+</section>
 
 {% endblock %}

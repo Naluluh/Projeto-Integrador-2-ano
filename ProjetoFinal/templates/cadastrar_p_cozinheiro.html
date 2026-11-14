@@ -13,7 +13,7 @@ Perfil do cozinheiro
 
     <p>Adicione seu currículo para concluir seu cadastro.</p>
 
-    <form method="post" class="formulario" enctype="multipart/form-data">
+    <form method="post" class="formulario formulario--linhas" enctype="multipart/form-data">
 
         <label for="formacao">Formação</label>
         <input type="text" id="formacao" name="formacao">
@@ -43,6 +43,7 @@ Perfil do cozinheiro
 
         <button
             type="button"
+            class="botao botao--neutro"
             onclick="document.getElementById('boxNovaCategoria').style.display = 'block'"
         >
             Adicionar Nova Categoria
@@ -66,7 +67,7 @@ Perfil do cozinheiro
                 placeholder="Nome da nova categoria"
             >
 
-            <button type="button" onclick="cadastrarCategoriaAsync()">
+            <button type="button" class="botao secundario botao--mini" onclick="cadastrarCategoriaAsync()">
                 Salvar Categoria
             </button>
 
@@ -75,7 +76,7 @@ Perfil do cozinheiro
         <label for="experiencia">Experiência</label>
         <input type="text" id="experiencia" name="experiencia">
 
-        <button type="submit">Cadastrar Perfil</button>
+        <button type="submit" class="botao primario">Cadastrar Perfil</button>
 
     </form>
 

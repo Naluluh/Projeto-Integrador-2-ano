@@ -58,14 +58,14 @@ Minhas categorias · Sabor & Clic
                             action="{{ url_for('perfil_chef.remover_categoria', categoria_id=c.id) }}"
                             onsubmit="return confirm('Deixar de ser responsável por esta categoria? Você sairá dos pratos dela (o histórico de pedidos é mantido).')"
                         >
-                            <button class="perigo link-button">Deixar categoria</button>
+                            <button type="submit" class="botao botao--perigo botao--mini">Deixar categoria</button>
                         </form>
                     {% else %}
                         <form
                             method="post"
                             action="{{ url_for('perfil_chef.adicionar_categoria', categoria_id=c.id) }}"
                         >
-                            <button class="botao primario">Assumir categoria</button>
+                            <button type="submit" class="botao primario botao--mini">Assumir categoria</button>
                         </form>
                     {% endif %}
                 </td>

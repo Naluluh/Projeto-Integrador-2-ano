@@ -26,13 +26,11 @@ ingrediente_bp = Blueprint(
 @administrador_required
 def _dados_formulario():
 
-    # Obtém o nome.
     nome = request.form.get(
         "nome",
         ""
     ).strip()
 
-    # Obtém a unidade.
     unidade = request.form.get(
         "unidade",
         ""
@@ -49,7 +47,6 @@ def _dados_formulario():
     except ValueError:
         estoque = -1
 
-    # Valida os dados.
     if (
         not nome
         or not unidade
@@ -65,13 +62,11 @@ def _dados_formulario():
 @ingrediente_bp.get("")
 def listar():
 
-    # Obtém o termo da pesquisa.
     busca = request.args.get(
         "busca",
         ""
     )
 
-    # Busca os ingredientes.
     ingredientes = ingrediente_model.listar(
         busca
     )
@@ -94,10 +89,8 @@ def novo():
 
         try:
 
-            # Obtém os dados.
             dados = _dados_formulario()
 
-            # Cria o ingrediente.
             ingrediente_model.criar(
                 *dados
             )
@@ -132,7 +125,6 @@ def novo():
 @administrador_required
 def editar(ingrediente_id):
 
-    # Busca o ingrediente.
     ingrediente = ingrediente_model.buscar(
         ingrediente_id
     )
@@ -180,13 +172,11 @@ def editar(ingrediente_id):
 @administrador_required
 def excluir(ingrediente_id):
 
-    # Verifica se o ingrediente existe.
     if ingrediente_model.buscar(
         ingrediente_id
     ) is None:
         abort(404)
 
-    # Exclui o ingrediente.
     ingrediente_model.excluir(
         ingrediente_id
     )

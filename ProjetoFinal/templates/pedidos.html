@@ -81,7 +81,7 @@ Pedidos
                     {% endif %}
 
                     <td>
-                        <span class="status-pedido">
+                        <span class="status-pedido" data-status="{{ p.status }}">
                             {{ p.status }}
                         </span>
 
@@ -99,7 +99,7 @@ Pedidos
                     </td>
 
                     <td>
-                        <a href="{{ url_for(
+                        <a class="botao botao--neutro botao--mini" href="{{ url_for(
                             'pedido.detalhes',
                             pedido_id=p.id
                         ) }}">

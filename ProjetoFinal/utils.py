@@ -8,10 +8,12 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from flask import request, url_for
 
-# Brasília (UTC-3). O Brasil não adota mais horário de verão.
+from config import NA_VERCEL
+
+# Brasília (UTC-3), sem horário de verão
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
 
-# Tamanho máximo das imagens enviadas (a Vercel limita o corpo da requisição).
+# Tamanho máximo da imagem
 TAMANHO_MAXIMO_IMAGEM = 2 * 1024 * 1024
 
 
@@ -22,16 +24,12 @@ def formatar_datahora(valor):
 
     texto = str(valor).strip()
 
-    # O PostgreSQL pode devolver o fuso como "+00"; o Python precisa de "+00:00".
-    if re.search(r"[+-]\d{2}$", texto):
-        texto += ":00"
-
     try:
         momento = datetime.fromisoformat(texto)
     except ValueError:
         return str(valor)
 
-    # Datas sem fuso (formato antigo do SQLite) já estavam em UTC.
+    # O SQLite grava em UTC, sem o fuso
     if momento.tzinfo is None:
         momento = momento.replace(tzinfo=timezone.utc)
 
@@ -56,7 +54,7 @@ def url_foto(caminho, padrao=None):
 
 
 def _tipo_da_imagem(dados):
-    # Identifica o formato pelo conteúdo do arquivo, e não pelo nome.
+    # Descobre o formato pelo conteúdo, não pelo nome
     if dados.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
     if dados.startswith(b"\xff\xd8\xff"):
@@ -71,8 +69,8 @@ def _tipo_da_imagem(dados):
 def salvar_imagem(arquivo):
     """Guarda a imagem enviada no banco e devolve "db:<id>".
 
-    A Vercel não permite gravar arquivos em disco, então as fotos enviadas
-    ficam na tabela "imagens". Devolve None se nenhum arquivo foi enviado e
+    As fotos enviadas ficam na tabela "imagens" do banco local, junto com
+    o resto dos dados (um único arquivo para copiar/fazer backup). Devolve None se nenhum arquivo foi enviado e
     levanta ValueError se o arquivo for inválido.
     """
     if not arquivo or not arquivo.filename:
@@ -97,7 +95,7 @@ def salvar_imagem(arquivo):
 
 
 def moeda_para_centavos(valor):
-    # Converte o valor recebido para texto e remove espaços e o símbolo R$.
+    # Vira texto, sem espaços nem R$
     texto = str(valor).strip().replace("R$", "").replace(" ", "")
 
     # Aceita formatos brasileiros, como:
@@ -107,8 +105,7 @@ def moeda_para_centavos(valor):
         texto = texto.replace(".", "").replace(",", ".")
 
     try:
-        # Converte o valor para Decimal para evitar problemas de
-        # precisão comuns em números de ponto flutuante.
+        # Decimal evita erro de arredondamento do float
         return int(
             (
                 Decimal(texto) * 100
@@ -118,7 +115,7 @@ def moeda_para_centavos(valor):
             )
         )
 
-    # Caso o valor não possa ser convertido para número.
+    # Valor que não vira número
     except InvalidOperation as erro:
         raise ValueError(
             "Valor monetário inválido"
@@ -126,10 +123,10 @@ def moeda_para_centavos(valor):
 
 
 def formatar_moeda(centavos):
-    # Converte os centavos para reais.
+    # Centavos para reais
     valor = Decimal(int(centavos)) / 100
 
-    # Formata no padrão brasileiro:
+    # Formato brasileiro:
     # 1234 centavos → R$ 12,34
     return (
         f"R$ {valor:,.2f}"
@@ -151,14 +148,12 @@ from flask import (
 
 
 
-# ---------------------------------------------------------------------------
 # Regras de senha
-# ---------------------------------------------------------------------------
 
 SENHA_MIN = 8
 SENHA_MAX = 32
 
-# Mesma regra mostrada na tela (ver static/js/script.js e _macros.html).
+# Mesma regra da tela (static/js/script.js e _macros.html)
 SENHA_REGRAS_TEXTO = (
     "A senha deve ter de 8 a 32 caracteres, com pelo menos uma letra "
     "minúscula, uma maiúscula, um número e um símbolo especial "
@@ -198,9 +193,8 @@ def validar_nova_senha(senha, confirmacao):
     if erro:
         return erro
 
-    # As senhas são comparadas em texto puro (antes do hash). Os hashes do
-    # Werkzeug usam "sal" aleatório, então dois hashes da mesma senha nunca
-    # são iguais: comparar hashes não funcionaria.
+    # Compara a senha em texto puro (antes do hash): o hash do Werkzeug
+    # tem sal aleatório, então dois hashes da mesma senha nunca são iguais
     if not secrets.compare_digest(
         senha.encode("utf-8"),
         confirmacao.encode("utf-8")
@@ -215,7 +209,7 @@ def gerar_senha_temporaria(tamanho=12):
 
     sorteio = secrets.SystemRandom()
 
-    # Evita símbolos fáceis de confundir ao ditar a senha.
+    # Evita símbolos que confundem ao ditar a senha
     simbolos = "!@#$%&*?"
 
     senha = [
@@ -234,12 +228,19 @@ def gerar_senha_temporaria(tamanho=12):
 
 
 def ip_cliente():
-    """IP de quem fez a requisição (a Vercel envia em X-Forwarded-For)."""
+    """IP de quem fez a requisição.
 
-    encaminhado = request.headers.get("X-Forwarded-For", "")
+    Rodando localmente não há proxy na frente do app, então o cabeçalho
+    X-Forwarded-For não é confiável (qualquer um poderia forjá-lo para
+    escapar do bloqueio de tentativas de login).
+    """
 
-    if encaminhado:
-        return encaminhado.split(",")[0].strip()[:64]
+    # Na Vercel o proxy deles preenche o X-Forwarded-For, então dá pra confiar
+    if NA_VERCEL:
+        ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+
+        if ip:
+            return ip[:64]
 
     return (request.remote_addr or "desconhecido")[:64]
 
@@ -252,7 +253,7 @@ def login_required(funcao):
     @wraps(funcao)
     def verificar_login(*args, **kwargs):
 
-        # Verifica se existe um funcionário autenticado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -280,7 +281,7 @@ def administrador_required(funcao):
     @wraps(funcao)
     def verificar_administrador(*args, **kwargs):
 
-        # Primeiro verifica se existe alguém logado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -292,7 +293,7 @@ def administrador_required(funcao):
                 url_for("auth.login")
             )
 
-        # Depois verifica o cargo armazenado na sessão.
+        # Confere o cargo na sessão
         if session.get("cargo") != "administrador":
 
             flash(
@@ -316,7 +317,7 @@ def cozinheiro_required(funcao):
     @wraps(funcao)
     def verificar_cozinheiro(*args, **kwargs):
 
-        # Primeiro verifica se existe alguém logado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -328,7 +329,7 @@ def cozinheiro_required(funcao):
                 url_for("auth.login")
             )
 
-        # Depois verifica o cargo armazenado na sessão.
+        # Confere o cargo na sessão
         if session.get("cargo") != "cozinheiro":
 
             flash(
@@ -352,7 +353,7 @@ def cliente_required(funcao):
     @wraps(funcao)
     def verificar_cliente(*args, **kwargs):
 
-        # Primeiro verifica se existe alguém logado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -364,7 +365,7 @@ def cliente_required(funcao):
                 url_for("auth.login")
             )
 
-        # Depois verifica o cargo armazenado na sessão.
+        # Confere o cargo na sessão
         if session.get("cargo") != "cliente":
 
             flash(
@@ -388,7 +389,7 @@ def gestor_required(funcao):
     @wraps(funcao)
     def verificar_gestor(*args, **kwargs):
 
-        # Primeiro verifica se existe alguém logado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -400,7 +401,7 @@ def gestor_required(funcao):
                 url_for("auth.login")
             )
 
-        # Depois verifica o cargo armazenado na sessão.
+        # Confere o cargo na sessão
         if session.get("cargo") != "administrador" and session.get("cargo") != "cozinheiro":
 
             flash(
@@ -424,7 +425,7 @@ def adm_cli_required(funcao):
     @wraps(funcao)
     def verificar_end(*args, **kwargs):
 
-        # Primeiro verifica se existe alguém logado.
+        # Tem alguém logado?
         if "usuario_id" not in session:
 
             flash(
@@ -436,7 +437,7 @@ def adm_cli_required(funcao):
                 url_for("auth.login")
             )
 
-        # Depois verifica o cargo armazenado na sessão.
+        # Confere o cargo na sessão
         if session.get("cargo") != "administrador" and session.get("cargo") != "cliente":
 
             flash(

@@ -3,7 +3,7 @@
 import math
 from io import BytesIO
 
-from psycopg import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from flask import (
     Blueprint, abort, flash, redirect, render_template,
     request, send_file, session, url_for
@@ -139,10 +139,11 @@ def alterar_visibilidade(prato_id):
     prato_model.definir_ativo(prato_id, ativo)
 
     if ativo:
-        flash(f"{prato['nome']} está visível para todos.", "sucesso")
+        flash(f"{prato['nome']} agora está disponível para todos.", "sucesso")
     else:
         flash(
-            f"{prato['nome']} foi ocultado." 
+            f"{prato['nome']} ficou indisponível e está oculto para os "
+            "outros usuários. Os pedidos antigos continuam no histórico.",
             "sucesso"
         )
 
@@ -283,7 +284,7 @@ def _dados_chefs():
 
 
 def _salvar_foto():
-    # A foto é guardada no banco (a Vercel não permite gravar em disco).
+    # Foto vai pro banco
     return salvar_imagem(request.files.get("foto_produto"))
 
 
@@ -322,7 +323,7 @@ def novo():
                 chefs_ids=chefs_ids,
                 foto_url=foto_url
             )
-            flash("Produto cadastrado.", "sucesso")
+            flash("Produto cadastrado com sucesso.", "sucesso")
             return redirect(url_for("prato.listar"))
 
         except (ValueError, TypeError) as erro:
@@ -361,7 +362,7 @@ def editar(prato_id):
                 chefs_ids=chefs_ids,
                 foto_url=foto_url
             )
-            flash("Produto e receita atualizados.", "sucesso")
+            flash("Produto e receita atualizados com sucesso.", "sucesso")
             return redirect(url_for("prato.listar"))
 
         except (ValueError, TypeError) as erro:

@@ -5,8 +5,7 @@ from database import get_db
 
 
 def buscar_por_usuario(usuario):
-    # Procura um funcionário pelo nome de usuário.
-    # permite ignorar maiúsculas e minúsculas.
+    # Procura pelo nome de usuário (ignora maiúsculas)
     return get_db().execute(
         "SELECT * FROM usuarios WHERE LOWER(usuario) = LOWER(?)",
         (usuario,)
@@ -14,13 +13,11 @@ def buscar_por_usuario(usuario):
 
 
 def criar(nome, usuario, senha_hash, cargo, foto_url=None):
-    # Obtém a conexão com o banco.
     db = get_db()
 
     if not foto_url:
         foto_url = "images/fotos_perfil/usuarios/template_usuarios.jpeg"
 
-    # Insere um novo funcionário.
     cursor = db.execute(
         """
         INSERT INTO usuarios (
@@ -35,10 +32,8 @@ def criar(nome, usuario, senha_hash, cargo, foto_url=None):
         (nome, usuario, senha_hash, cargo, foto_url)
     )
 
-    # Confirma a alteração.
     db.commit()
 
-    # Retorna o ID criado.
     return cursor.lastrowid
 
 
@@ -74,7 +69,6 @@ def listar_cozinheiros():
 
 
 def buscar(usuario_id):
-    # Procura um funcionário pelo ID.
     return get_db().execute(
         """
         SELECT *
@@ -93,11 +87,9 @@ def atualizar(
     cargo,
     foto_url=None
 ):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Se uma nova foto foi enviada,
-    # atualiza também o caminho da imagem.
+    # Se veio foto nova, atualiza o caminho
     if foto_url:
         db.execute(
             """
@@ -139,7 +131,6 @@ def atualizar(
             )
         )
 
-    # Confirma a alteração.
     db.commit()
 
 

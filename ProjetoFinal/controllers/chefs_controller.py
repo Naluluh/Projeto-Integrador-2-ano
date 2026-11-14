@@ -27,7 +27,7 @@ def _e_administrador():
     return session.get("cargo") == "administrador"
 
 
-# Lista de todos os cozinheiros (aba "Cozinheiros").
+# Lista de cozinheiros
 @chefs_bp.get("/")
 def listar():
 
@@ -38,7 +38,7 @@ def listar():
     return render_template("chefs_lista.html", chefs=chefs)
 
 
-# Perfil de um cozinheiro: cadastro, categorias e pratos pelos quais responde.
+# Perfil do cozinheiro: cadastro, categorias e pratos
 @chefs_bp.get("/<int:chef_id>")
 def perfil(chef_id):
 
@@ -59,13 +59,13 @@ def perfil(chef_id):
     )
 
 
-# Buscar cozinheiros relacionados a um produto.
+# Cozinheiros de um produto
 @chefs_bp.route("/prato/<int:id_p>")
 def por_prato(id_p):
 
     produto = prato_model.buscar(id_p)
 
-    # Prato oculto só é visto pelo administrador.
+    # Prato oculto só o admin vê
     if produto is None or (
         not produto["ativo"] and not _e_administrador()
     ):
@@ -83,7 +83,7 @@ def por_prato(id_p):
     )
 
 
-# Buscar cozinheiros relacionados a uma categoria.
+# Cozinheiros de uma categoria
 @chefs_bp.route("/categoria/<int:categoria_id>")
 def por_categoria(categoria_id):
 
@@ -97,7 +97,7 @@ def por_categoria(categoria_id):
     )
 
 
-# Selecionar cozinheiro a partir de uma categoria.
+# Escolher cozinheiro pela categoria
 @chefs_bp.route(
     "/selecionar/categoria/<int:categoria_id>/<int:chef_id>"
 )
@@ -116,10 +116,10 @@ def selecionar_categoria(categoria_id, chef_id):
             url_for("chefs.por_categoria", categoria_id=categoria_id)
         )
 
-    # Guarda o cozinheiro e a categoria escolhidos.
+    # Guarda cozinheiro e categoria
     carrinho_service.definir_chef(chef_id, categoria_id=categoria_id)
 
-    # Busca os produtos que esse cozinheiro prepara.
+    # Produtos que ele prepara
     produtos = chefs_model.produtos_chef_categoria(
         chef_id,
         categoria_id,
@@ -134,7 +134,7 @@ def selecionar_categoria(categoria_id, chef_id):
     )
 
 
-# Selecionar cozinheiro a partir de um produto.
+# Escolher cozinheiro pelo produto
 @chefs_bp.route(
     "/selecionar/prato/<int:id_p>/<int:chef_id>"
 )
@@ -153,7 +153,7 @@ def selecionar_prato(id_p, chef_id):
         id_p
     ):
         flash(
-            "Cozinheiro indiponível para esse produto.",
+            "Esse cozinheiro não está relacionado ao produto.",
             "erro"
         )
 
@@ -163,15 +163,15 @@ def selecionar_prato(id_p, chef_id):
 
     categoria_id = produto["categoria_id"]
 
-    # Guarda o cozinheiro, a categoria e o produto escolhidos.
+    # Guarda cozinheiro, categoria e produto
     carrinho_service.definir_chef(
         chef_id,
         categoria_id=categoria_id,
         produto_id=id_p
     )
 
-    # A pessoa tentou adicionar este prato antes de escolher o cozinheiro:
-    # agora o prato entra no carrinho e ela segue para o pedido.
+    # Tentou adicionar o prato antes de escolher o cozinheiro:
+    # agora o prato entra no carrinho e segue pro pedido
     pendente = session.pop("pedido_pendente", None)
 
     if (

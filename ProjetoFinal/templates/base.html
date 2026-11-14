@@ -12,25 +12,66 @@
         content="width=device-width, initial-scale=1"
     >
 
+    <!--
+        Nome da página atual, usado na trilha da barra superior.
+        Remove o sufixo "Sabor & Clic" que alguns títulos carregam.
+    -->
+    {% set pagina_atual = self.titulo()
+        |striptags
+        |replace(' | Sabor & Clic', '')
+        |replace(' - Sabor & Clic', '')
+        |replace(' · Sabor & Clic', '')
+        |trim %}
+
     <!-- Permite que cada página defina seu próprio título. -->
     <title>
         {% block titulo %}Sabor & Clic{% endblock %}
     </title>
 
-    <!-- Carrega o CSS da aplicação. -->
+    <!-- Fontes do protótipo: Red Hat Display (títulos) e Open Sans (texto). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         rel="stylesheet"
-        href="{{ url_for('static', filename='style3.css') }}"
+        href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Red+Hat+Display:wght@500;700;900&display=swap"
     >
+
+    <!-- Ícone da aba: monograma SC da marca. -->
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ url_for('static', filename='images/logo/favicon.png') }}"
+    >
+    <link
+        rel="apple-touch-icon"
+        href="{{ url_for('static', filename='images/logo/apple-touch-icon.png') }}"
+    >
+
+    <!-- Carrega o CSS da aplicação (identidade visual do Figma). -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style2.css') }}"
+    >
+
+    <!--
+        Aplica o tema e o filtro de daltonismo salvos antes de a página
+        ser desenhada (evita um "piscar" de tema).
+    -->
+    <script src="{{ url_for('static', filename='js/acessibilidade.js') }}"></script>
 
 </head>
 
 <body
+    class="{{ 'logado' if session.get('usuario_id') else 'publico' }} {% block classe_body %}{% endblock %}"
     {% if session.get('usuario_id') %}
         data-logado="1"
         data-inatividade="{{ inatividade_segundos }}"
     {% endif %}
 >
+
+<a class="pular-conteudo" href="#conteudo">
+    Pular para o conteúdo
+</a>
 
 <header class="topo">
 
@@ -40,13 +81,40 @@
     -->
     <a
         class="marca"
+        aria-label="Sabor & Clic"
         href="{{
             url_for('main.inicio')
             if session.get('usuario_id')
             else url_for('auth.login')
         }}"
     >
-        Sabor & Clic
+        {% if session.get('usuario_id') %}
+            {# Menu lateral vinho: versão clara da logo. #}
+            <img
+                class="marca__logo marca__logo--claro"
+                src="{{ url_for('static', filename='images/logo/logo-claro.png') }}"
+                alt="Sabor &amp; Clic"
+                width="640"
+                height="605"
+            >
+        {% else %}
+            {# Cabeçalho creme: logo vinho (no modo escuro troca para a clara). #}
+            <img
+                class="marca__logo marca__logo--vinho"
+                src="{{ url_for('static', filename='images/logo/logo-vinho.png') }}"
+                alt="Sabor &amp; Clic"
+                width="640"
+                height="605"
+            >
+            <img
+                class="marca__logo marca__logo--claro"
+                src="{{ url_for('static', filename='images/logo/logo-claro.png') }}"
+                alt=""
+                aria-hidden="true"
+                width="640"
+                height="605"
+            >
+        {% endif %}
     </a>
 
 
@@ -59,47 +127,77 @@
     <nav aria-label="Navegação principal">
 
         <!-- Página inicial -->
-        <a href="{{ url_for('main.inicio') }}">
+        <a
+            href="{{ url_for('main.inicio') }}"
+            {% if request.endpoint == 'main.inicio' %}aria-current="page"{% endif %}
+        >
             Início
         </a>
 
         {%if session.cargo != 'cliente'%}
         <!-- Pratos -->
-        <a href="{{ url_for('prato.listar') }}">
+        <a
+            href="{{ url_for('prato.listar') }}"
+            {% if request.endpoint == 'prato.listar' %}aria-current="page"{% endif %}
+        >
             Pratos
         </a>
         {%endif%}
 
         <!-- Novo pedido -->
-        <a href="{{ url_for('pedido.novo') }}">
+        <a
+            href="{{ url_for('pedido.novo') }}"
+            {% if request.endpoint == 'pedido.novo' %}aria-current="page"{% endif %}
+        >
             Novo pedido
         </a>
 
-        <a href="{{ url_for('categorias.main') }}">
+        <a
+            href="{{ url_for('categorias.main') }}"
+            {% if request.endpoint == 'categorias.main' %}aria-current="page"{% endif %}
+        >
             Categorias
         </a>
 
-        <a href="{{ url_for('chefs.listar') }}">
+
+        <a
+            href="{{ url_for('chefs.listar') }}"
+            {% if request.endpoint == 'chefs.listar' %}aria-current="page"{% endif %}
+        >
             Cozinheiros
         </a>
 
         {% if session.get('cargo') == 'cozinheiro' %}
-            <a href="{{ url_for('chefs.perfil', chef_id=session.get('usuario_id')) }}">
+
+            <a
+                href="{{ url_for('chefs.perfil', chef_id=session.get('usuario_id')) }}"
+                {% if request.endpoint == 'chefs.perfil' %}aria-current="page"{% endif %}
+            >
                 Meu perfil
             </a>
 
-            <a href="{{ url_for('perfil_chef.categorias') }}">
+            <a
+                href="{{ url_for('perfil_chef.categorias') }}"
+                {% if request.endpoint == 'perfil_chef.categorias' %}aria-current="page"{% endif %}
+            >
                 Minhas categorias
             </a>
+
         {% endif %}
 
 
         <!-- Pedidos -->
-        <a href="{{ url_for('pedido.listar') }}">
+        <a
+            href="{{ url_for('pedido.listar') }}"
+            {% if request.endpoint == 'pedido.listar' %}aria-current="page"{% endif %}
+        >
             Pedidos
         </a>
 
-        <a href="{{ url_for('prato.categorias') }}">
+        <a
+            href="{{ url_for('prato.categorias') }}"
+            {% if request.endpoint == 'prato.categorias' %}aria-current="page"{% endif %}
+        >
             Cardápio
         </a>
 
@@ -110,29 +208,41 @@
         -->
         {% if session.get('cargo') == 'administrador' %}
 
-            <a href="{{ url_for('usuario.listar') }}">
+            <a
+                href="{{ url_for('usuario.listar') }}"
+                {% if request.endpoint == 'usuario.listar' %}aria-current="page"{% endif %}
+            >
                 Usuários
             </a>
 
             <!-- Ingredientes -->
-        <a href="{{ url_for('ingrediente.listar') }}">
-            Ingredientes
-        </a>
+            <a
+                href="{{ url_for('ingrediente.listar') }}"
+                {% if request.endpoint == 'ingrediente.listar' %}aria-current="page"{% endif %}
+            >
+                Ingredientes
+            </a>
 
         {% endif %}
 
         {% if session.get('cargo') == 'cliente' %}
 
-            <a href="{{ url_for('endereco.editar') }}">
+            <a
+                href="{{ url_for('endereco.editar') }}"
+                {% if request.endpoint == 'endereco.editar' %}aria-current="page"{% endif %}
+            >
                 Endereço
             </a>
 
         {% endif %}
 
-
-        <a href="{{ url_for('auth.alterar_senha') }}">
+        <a
+            href="{{ url_for('auth.alterar_senha') }}"
+            {% if request.endpoint == 'auth.alterar_senha' %}aria-current="page"{% endif %}
+        >
             Alterar senha
         </a>
+
 
         <!-- =================================================
              INFORMAÇÕES DO USUÁRIO
@@ -140,11 +250,22 @@
 
         <span class="usuario-logado">
 
-            {{ session.get('usuario_nome') }}
+            <span class="avatar" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7z"/>
+                </svg>
+            </span>
 
-            <small>
-                ({{ session.get('cargo') }})
-            </small>
+            <span class="usuario-nome">
+
+                {{ session.get('usuario_nome') }}
+
+                <small>
+                    ({{ session.get('cargo') }})
+                </small>
+
+            </span>
 
         </span>
 
@@ -169,12 +290,70 @@
 
     </nav>
 
+    {% else %}
+
+    <!-- ====================================================
+         CABEÇALHO PÚBLICO (visitante)
+         ==================================================== -->
+
+    <div class="nav-publica">
+
+        <a
+            class="botao-entrar"
+            href="{{ url_for('auth.login') }}"
+        >
+            Entrar
+        </a>
+
+        {% include "_acessibilidade.html" %}
+
+    </div>
+
     {% endif %}
 
 </header>
 
 
-<main class="container">
+{% if session.get('usuario_id') %}
+
+<!-- ========================================================
+     BARRA SUPERIOR: trilha da página + acessibilidade
+     ======================================================== -->
+<div class="barra-topo">
+
+    <nav class="trilha" aria-label="Você está em">
+        <ol>
+            <li>{{ session.get('cargo')|capitalize }}</li>
+            <li aria-current="page">{{ pagina_atual }}</li>
+        </ol>
+    </nav>
+
+    <div class="barra-topo__acoes">
+
+        <a
+            class="icone-btn"
+            href="{{ url_for('auth.login') }}"
+            aria-label="Ir para a homepage"
+            title="Homepage"
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M3.5 10.5 12 3l8.5 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z"/>
+            </svg>
+        </a>
+
+        {% include "_acessibilidade.html" %}
+
+    </div>
+
+</div>
+
+{% endif %}
+
+
+{# Formas decorativas de cada página (ver _formas.html). #}
+{% block formas %}{% endblock %}
+
+<main id="conteudo" class="container {% block classe_main %}{% endblock %}" tabindex="-1">
 
     <!--
         Recupera mensagens enviadas pelos Controllers.
@@ -185,6 +364,8 @@
 
         {% for categoria, mensagem in mensagens %}
 
+            {# Mensagens de confirmação ("... com sucesso") não são exibidas. #}
+            {% if 'com sucesso' not in mensagem %}
             <div
                 class="alerta {{ categoria }}"
                 role="alert"
@@ -197,6 +378,7 @@
                     aria-label="Fechar mensagem"
                 >&times;</button>
             </div>
+            {% endif %}
 
         {% endfor %}
 
@@ -211,11 +393,14 @@
 
 <footer>
 
-    Sabor e Clic
+    Projeto integrador ·
+    Disciplinas técnicas ·
+    2° ano
 
 </footer>
 
-</body>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
 
 </html>

@@ -5,61 +5,156 @@
 Entrar · Sabor & Clic
 {% endblock %}
 
+{# A página inicial ocupa toda a largura (sem o recuo padrão do <main>). #}
+{% block classe_main %}container--cheio{% endblock %}
+
 {% block conteudo %}
 
-<section class="auth-card">
+<div class="home">
 
-    <h1>Bem-vindo</h1>
+    <!-- ====================================================
+         APRESENTAÇÃO (primeira dobra do Figma)
+         ==================================================== -->
+    <section class="home-hero" aria-labelledby="titulo-home">
 
-    <p>
-        Entre para gerenciar o restaurante.
-    </p>
+        <div class="home-proposta">
+            <h1 id="titulo-home">
+                Transformando alta gastronomia em alta performance,
+                para quem produz e para quem consome.
+            </h1>
+            <p>
+                A Sabor &amp; Clic une a eficiência de cozinhas
+                profissionais compartilhadas à praticidade de um
+                delivery inteligente.
+            </p>
+        </div>
 
-    <form
-        method="post"
-        class="formulario"
-    >
+        <!-- Fotografia decorativa: o arquivo vem de static/images/home/hero.jpg -->
+        <div class="home-foto" aria-hidden="true"></div>
 
-        {% if proxima %}
-            <input type="hidden" name="proxima" value="{{ proxima }}">
+    </section>
+
+    <hr class="home-divisoria">
+
+    <!-- ====================================================
+         CONHEÇA O SABOR & CLIC + FORMULÁRIO DE ENTRADA
+         ==================================================== -->
+    <section id="conheca" aria-labelledby="titulo-conheca">
+
+        <div class="conheca-painel" aria-hidden="true"></div>
+
+        <!-- Formas orgânicas do Figma (vinho, pêssego e linha branca) -->
+        <svg
+            class="conheca-formas"
+            viewBox="0 0 700 1030"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <circle cx="115" cy="690" r="500" style="fill: var(--forma-vinho)"/>
+            <path
+                d="M0 540 C70 530 110 600 150 670 C190 740 310 760 400 830 C470 880 560 940 620 1030 L0 1030 Z"
+                style="fill: var(--forma-pessego)"
+            />
+            <path
+                d="M0 690 C60 680 120 690 170 720 C190 800 170 900 220 980 C260 1030 320 1030 360 1030"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="3"
+            />
+        </svg>
+
+        <h2 id="titulo-conheca">
+            Conheça o <span>Sabor &amp; Clic</span>
+        </h2>
+
+        <!-- Prato decorativo: o arquivo vem de static/images/home/prato.jpg -->
+        <div class="home-prato" aria-hidden="true"></div>
+
+        {% if session.get('usuario_id') %}
+
+        <div class="entrar-card">
+
+            <h2>Olá, {{ session.get('usuario_nome') }}!</h2>
+
+            <p>
+                Você já está conectado como {{ session.get('cargo') }}.
+                Use o botão abaixo para voltar ao seu painel.
+            </p>
+
+            <a
+                class="botao primario botao--grande"
+                href="{{ url_for('main.inicio') }}"
+            >
+                Ir para o meu painel
+            </a>
+
+        </div>
+
+        {% else %}
+
+        <div class="entrar-card">
+
+            <h2>Entrar</h2>
+
+            <p>
+                Um clique, três experiências: o sistema se adapta
+                automaticamente para cliente, cozinheiro ou
+                administrador.
+            </p>
+
+            <form
+                method="post"
+                class="formulario"
+            >
+
+                {% if proxima %}
+                    <input type="hidden" name="proxima" value="{{ proxima }}">
+                {% endif %}
+
+                <label>
+                    Usuário
+                    <input
+                        name="usuario"
+                        required
+                        autofocus
+                        autocomplete="username"
+                    >
+                </label>
+
+                {{ campo_senha("senha", "Senha", autocomplete="current-password") }}
+
+                <p class="esqueci">
+                    <a href="{{ url_for('auth.esqueci_senha') }}">Esqueci minha senha</a>
+                </p>
+
+                <button
+                    class="botao primario botao--grande"
+                    type="submit"
+                >
+                    Entrar
+                </button>
+
+            </form>
+
+            <hr>
+
+            <p class="sem-conta">
+                Não possui uma conta? Cadastre-se agora!
+            </p>
+
+            <a
+                class="botao primario botao--grande"
+                href="{{ url_for('auth.cadastro') }}"
+            >
+                Cadastrar
+            </a>
+
+        </div>
+
         {% endif %}
 
-        <!-- Usuário do funcionário. -->
-        <label>
-            Usuário
+    </section>
 
-            <input
-                name="usuario"
-                required
-                autofocus
-                autocomplete="username"
-            >
-        </label>
-
-        <!-- Senha (com botão para mostrar/ocultar). -->
-        {{ campo_senha("senha", "Senha", autocomplete="current-password") }}
-
-        <button
-            class="botao primario"
-            type="submit"
-        >
-            Entrar
-        </button>
-
-    </form>
-
-    <p>
-        <a href="{{ url_for('auth.esqueci_senha') }}">
-            Esqueci minha senha
-        </a>
-    </p>
-
-    <p>
-        <a href="{{ url_for('auth.cadastro') }}">
-            Cadastrar usuário
-        </a>
-    </p>
-
-</section>
+</div>
 
 {% endblock %}

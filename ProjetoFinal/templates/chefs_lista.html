@@ -1,8 +1,11 @@
 {% extends "base.html" %}
+{% from "_formas.html" import forma_elipses %}
 
 {% block titulo %}
 Cozinheiros · Sabor & Clic
 {% endblock %}
+
+{% block classe_body %}forma-propria{% endblock %}
 
 {% block conteudo %}
 
@@ -14,6 +17,10 @@ Cozinheiros · Sabor & Clic
 </div>
 
 {% if chefs %}
+
+<div class="cena-chefs">
+
+{{ forma_elipses() }}
 
 <div class="grade-chefs">
 
@@ -57,9 +64,13 @@ Cozinheiros · Sabor & Clic
 
 </div>
 
+</div>
+
 {% else %}
 
-<p>Nenhum cozinheiro cadastrado.</p>
+<div class="vazio">
+    <h2>Nenhum cozinheiro cadastrado</h2>
+</div>
 
 {% endif %}
 

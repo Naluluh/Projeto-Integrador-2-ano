@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% from "_formas.html" import salada_publica %}
 
 {% block titulo %}
 Esqueci minha senha · Sabor & Clic
 {% endblock %}
 
 {% block conteudo %}
+
+{{ salada_publica() }}
 
 <section class="auth-card">
 
@@ -33,7 +36,7 @@ Esqueci minha senha · Sabor & Clic
         </label>
 
         <button
-            class="botao primario"
+            class="botao primario botao--grande"
             type="submit"
         >
             Pedir nova senha

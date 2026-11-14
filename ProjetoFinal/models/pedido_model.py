@@ -197,7 +197,7 @@ def cancelar(pedido_id):
     db.commit()
 
 
-# Tolerância para comparações com números decimais (ex.: 0,1 + 0,2).
+# Tolerância para comparar decimais (ex.: 0,1 + 0,2)
 _EPS = 1e-9
 
 
@@ -230,8 +230,8 @@ def _planejar_consumo(db, carrinho):
     consumos = {}
 
     def estoque_virtual(ingrediente_id, valor_inicial):
-        # O estoque é "gasto" virtualmente, pois o carrinho pode ter vários
-        # pratos que usam o mesmo ingrediente.
+        # O estoque é gasto só na conta, porque o carrinho pode ter
+        # vários pratos com o mesmo ingrediente
         return estoques.setdefault(ingrediente_id, float(valor_inicial))
 
     def consumir(ingrediente_id, nome, unidade, quantidade):
@@ -458,8 +458,7 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
     db = get_db()
 
     try:
-        # No PostgreSQL a transação já é aberta automaticamente na primeira
-        # consulta e termina no commit/rollback.
+        # A transação abre na primeira consulta e termina no commit/rollback
 
         # 1. Valida o cozinheiro.
         chef = db.execute("""
@@ -501,8 +500,7 @@ def finalizar(usuario_id, chef_id, carrinho, endereco_id):
                     f"o produto {item['nome']}."
                 )
 
-        # 5. Planeja o consumo (não altera o estoque ainda). Aqui também é
-        #    verificado se algum prato ficou indisponível.
+        # 5. Planeja o consumo (sem mexer no estoque) e vê se algum prato ficou indisponível
         itens, consumos = _planejar_consumo(db, carrinho)
 
         # 6. Calcula o total ANTES de usá-lo no INSERT.
@@ -681,9 +679,6 @@ def quantidade_visivel(cargo, usuario_id):
     elif cargo == "cozinheiro":
         consulta = "SELECT COUNT(*) AS total FROM pedidos WHERE chef_id = ?"
         parametros = (usuario_id,)
-
-        # "SELECT COUNT(*) AS total FROM pedidos "
-        # "WHERE chef_id = ? AND status NOT IN ('entregue', 'cancelado')"
 
     else:
         return 0

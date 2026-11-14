@@ -1,4 +1,3 @@
-#categorias_model
 
 from database import get_db
 

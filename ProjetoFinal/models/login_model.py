@@ -1,7 +1,7 @@
 """Controle de tentativas de login (proteção contra força bruta).
 
-As contagens ficam no banco (e não na memória) porque na Vercel cada
-requisição pode ser atendida por uma instância diferente do app.
+As contagens ficam no banco (e não na memória) para sobreviverem a
+reinícios do servidor.
 
 Os horários são guardados como segundos desde 1970 (inteiros), calculados
 no Python: assim o mesmo SQL funciona igual em qualquer banco.

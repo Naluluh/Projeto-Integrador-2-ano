@@ -122,12 +122,12 @@ def novo():
         session["carrinho"] = carrinho
 
         flash(
-            "Produtos indisponíveis: "
+            "Saíram do pedido por estarem indisponíveis: "
             + ", ".join(removidos) + ".",
             "aviso"
         )
 
-    # Mostra quais porções usarão ingrediente alternativo (se houver).
+    # Mostra as porções que vão usar ingrediente alternativo (se tiver)
     substituicoes = {}
 
     if carrinho:
@@ -177,7 +177,7 @@ def adicionar():
     produto = prato_model.buscar(produto_id)
 
     if produto is None or quantidade <= 0:
-        flash("Selecione um prato e uma quantidade válida.", "erro")
+        flash("Selecione um produto e uma quantidade válida.", "erro")
         return redirect(url_for("pedido.novo"))
 
     if not produto["ativo"]:
@@ -186,9 +186,8 @@ def adicionar():
 
     chef_id = session.get("chef_id")
 
-    # Sem cozinheiro escolhido (ou com um que não faz este prato), a pessoa
-    # é levada à lista de cozinheiros do prato. O pedido fica guardado e é
-    # concluído assim que ela escolher o cozinheiro.
+    # Sem cozinheiro (ou com um que não faz o prato), vai pra lista de cozinheiros
+    # do prato. O pedido fica guardado e termina quando ela escolher
     if not chef_id or not chefs_model.verificar_chef_produto(
         chef_id, produto_id
     ):
@@ -199,8 +198,8 @@ def adicionar():
 
         if chef_id:
             flash(
-                "Cozinheiro indisponível. "
-                "Escolha outro.",
+                "O cozinheiro selecionado não prepara este prato. "
+                "Escolha outro cozinheiro.",
                 "aviso"
             )
         else:
@@ -268,7 +267,7 @@ def finalizar():
     if not chef_id:
 
         flash(
-            "Selecione um cozinheiro.",
+            "Selecione um cozinheiro antes de finalizar.",
             "erro"
         )
 
@@ -291,7 +290,7 @@ def finalizar():
         flash(str(erro), "erro")
         return redirect(url_for("pedido.novo"))
 
-    # Limpa os dados do pedido finalizado.
+    # Limpa o pedido finalizado
     session.pop("carrinho", None)
     session.pop("chef_id", None)
     session.pop("categoria_id", None)
@@ -303,7 +302,7 @@ def finalizar():
         "sucesso"
     )
 
-    # Registra na tela quais porções usaram ingrediente alternativo.
+    # Avisa quais porções usaram ingrediente alternativo
     for aviso in avisos:
         flash(aviso, "aviso")
 
@@ -330,13 +329,13 @@ def detalhes(pedido_id):
     cargo = session.get("cargo")
     usuario_id = session.get("usuario_id")
 
-    # Administrador pode consultar qualquer pedido.
+    # Admin vê qualquer pedido
     if cargo == "administrador":
 
         pode_alterar_status = True
         pode_cancelar = False
 
-    # Cliente consulta somente os próprios pedidos.
+    # Cliente só vê os próprios
     elif cargo == "cliente":
 
         if pedido["usuario_id"] != usuario_id:
@@ -348,7 +347,7 @@ def detalhes(pedido_id):
             pedido["status"] not in {"entregue", "cancelado"}
         )
 
-    # Cozinheiro consulta somente os pedidos destinados a ele.
+    # Cozinheiro só vê os dele
     elif cargo == "cozinheiro":
 
         if pedido["chef_id"] != usuario_id:
@@ -394,7 +393,7 @@ def alterar_status(pedido_id):
         "entregue"
     }
 
-    # Administrador também pode cancelar.
+    # Admin também pode cancelar
     if cargo == "administrador":
         status_permitidos.add("cancelado")
 
@@ -409,7 +408,7 @@ def alterar_status(pedido_id):
             url_for("pedido.detalhes", pedido_id=pedido_id)
         )
 
-    # Cozinheiro só altera os próprios pedidos.
+    # Cozinheiro só altera os próprios pedidos
     if cargo == "cozinheiro":
 
         if pedido["chef_id"] != usuario_id:
@@ -465,7 +464,7 @@ def cancelar(pedido_id):
     if pedido is None:
         abort(404)
 
-    # Impede o cancelamento de pedidos de outras pessoas.
+    # Não deixa cancelar pedido de outra pessoa
     if pedido["usuario_id"] != session.get("usuario_id"):
         abort(403)
 

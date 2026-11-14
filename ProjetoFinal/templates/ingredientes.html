@@ -44,7 +44,7 @@ Ingredientes
             aria-label="Pesquisar"
         >
 
-        <button class="botao">
+        <button class="botao primario" type="submit">
             Pesquisar
         </button>
 
@@ -91,6 +91,7 @@ Ingredientes
                 <td class="acoes">
 
                     <a
+                        class="botao botao--neutro botao--mini"
                         href="{{
                             url_for(
                                 'ingrediente.editar',
@@ -117,7 +118,7 @@ Ingredientes
                     >
 
                         <button
-                            class="perigo link-button"
+                            class="botao botao--perigo botao--mini"
                         >
                             Excluir
                         </button>

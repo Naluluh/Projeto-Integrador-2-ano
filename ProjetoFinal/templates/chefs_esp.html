@@ -6,13 +6,18 @@
 
 {% block conteudo %}
 
-<h2>
-    {% if origem == "prato" and produto %}
-        Quem prepara {{ produto.nome }}
-    {% else %}
-        Chefs disponíveis
-    {% endif %}
-</h2>
+<div class="cabecalho-pagina">
+    <div>
+        <h1>
+            {% if origem == "prato" and produto %}
+                Quem prepara {{ produto.nome }}
+            {% else %}
+                Chefs disponíveis
+            {% endif %}
+        </h1>
+        <p>Selecione um cozinheiro para ver o cardápio e seguir com a compra.</p>
+    </div>
+</div>
 
 {% if origem == "prato" and pedido_pendente and pedido_pendente.produto_id == id_p %}
     <p class="dica">
@@ -23,17 +28,19 @@
 
 {% if chefs %}
 
+<section class="cards" aria-label="Cozinheiros">
+
     {% for chef in chefs %}
 
-        <section class="auth-card">
-
-            <h3>{{ chef.nome }}</h3>
+        <article class="card card--item">
 
             <img
                 class="foto-perfil"
                 src="{{ foto_src(chef.foto_url, 'images/fotos_perfil/usuarios/template_usuarios.jpeg') }}"
                 alt="Foto de {{ chef.nome }}"
             >
+
+            <h2>{{ chef.nome }}</h2>
 
             <p>Usuário: {{ chef.usuario }}</p>
 
@@ -67,18 +74,22 @@
 
             {% endif %}
 
-        </section>
+        </article>
 
     {% endfor %}
 
+</section>
+
 {% else %}
 
-    <p>Não há cozinheiros relacionados a esta busca.</p>
+    <p class="vazio">Não há cozinheiros relacionados a esta busca.</p>
 
 {% endif %}
 
-<a href="{{ url_for('categorias.main') }}">
-    Voltar às categorias
-</a>
+<div class="acoes-finais">
+    <a class="botao secundario" href="{{ url_for('categorias.main') }}">
+        Voltar às categorias
+    </a>
+</div>
 
 {% endblock %}

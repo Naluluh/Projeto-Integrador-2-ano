@@ -25,10 +25,8 @@ def listar_por_prato(produto_id):
 
 
 def adicionar(produto_id, ingrediente_id, quantidade):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Cria a relação entre prato e ingrediente.
     db.execute(
         """
         INSERT INTO produto_ingredientes
@@ -38,15 +36,12 @@ def adicionar(produto_id, ingrediente_id, quantidade):
         (produto_id, ingrediente_id, quantidade)
     )
 
-    # Confirma a alteração.
     db.commit()
 
 
 def remover(produto_id, ingrediente_id):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Remove a relação entre o prato e o ingrediente.
     db.execute(
         """
         DELETE FROM produto_ingredientes
@@ -55,5 +50,4 @@ def remover(produto_id, ingrediente_id):
         (produto_id, ingrediente_id)
     )
 
-    # Confirma a alteração.
     db.commit()

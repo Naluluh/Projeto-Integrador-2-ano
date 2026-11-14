@@ -8,24 +8,29 @@ Cardápio | Sabor & Clic
 
 <div class="catalogo">
 
-    <h1>Nosso cardápio</h1>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Nosso cardápio</h1>
+            <p>Escolha o tipo de comida que deseja.</p>
+        </div>
+    </div>
 
-    <p>Escolha o tipo de comida que deseja.</p>
-
-    <!-- Seleção da culinária -->
-
-    <div class="categorias">
+    <!-- Seleção da culinária (pílulas do Figma) -->
+    <nav class="categorias" aria-label="Categorias do cardápio">
 
         {% for categoria in categorias %}
-        <a href="{{ url_for(
-            'prato.catalogo_categoria',
-            categoria_id=categoria.id
-        ) }}">
+        <a
+            href="{{ url_for(
+                'prato.catalogo_categoria',
+                categoria_id=categoria.id
+            ) }}"
+            {% if categoria_atual == categoria.id %}aria-current="page"{% endif %}
+        >
             {{ categoria.nome }}
         </a>
         {% endfor %}
 
-    </div>
+    </nav>
 
     <!-- Lista de pratos -->
     <h2>
@@ -55,7 +60,7 @@ Cardápio | Sabor & Clic
 
             </a>
 
-            <div class="pratos-conteudo">
+            <div class="prato-conteudo">
 
                 <h3>{{ prato.nome }}</h3>
 
@@ -86,7 +91,7 @@ Cardápio | Sabor & Clic
                 {% endif %}
 
                 <!-- Ver detalhes -->
-                <a class="botao" href="{{ url_for(
+                <a class="botao botao--neutro" href="{{ url_for(
                             'prato.detalhes',
                             prato_id=prato.id
                         ) }}">
@@ -114,13 +119,13 @@ Cardápio | Sabor & Clic
                         required
                     >
 
-                    <button type="submit">
+                    <button type="submit" class="botao primario">
                         Adicionar ao pedido
                     </button>
 
                     {% else %}
 
-                    <button type="button" disabled>
+                    <button type="button" class="botao" disabled>
                         Indisponível
                     </button>
 
@@ -136,7 +141,7 @@ Cardápio | Sabor & Clic
         {% else %}
 
         {% if categoria_atual %}
-        <p>Nenhum prato disponível nesta categoria.</p>
+        <p class="vazio">Nenhum prato disponível nesta categoria.</p>
         {% endif %}
 
         {% endfor %}

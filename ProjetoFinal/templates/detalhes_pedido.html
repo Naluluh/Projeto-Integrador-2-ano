@@ -7,9 +7,15 @@ Detalhes do pedido
 
 {% block conteudo %}
 
-<h1>Pedido #{{ pedido.id }}</h1>
+<div class="cabecalho-pagina">
+    <div>
+        <h1>Pedido #{{ pedido.id }}</h1>
+    </div>
+</div>
 
-<section class="auth-card">
+<div class="pilha">
+
+<section class="painel">
 
     <h2>Informações do pedido</h2>
 
@@ -30,7 +36,7 @@ Detalhes do pedido
 
     <p>
         <strong>Status:</strong>
-        {{ pedido.status }}
+        <span class="status-pedido" data-status="{{ pedido.status }}">{{ pedido.status }}</span>
     </p>
 
     <p>
@@ -41,7 +47,7 @@ Detalhes do pedido
 </section>
 
 
-<section class="auth-card">
+<section class="painel">
 
     <h2>Produtos do pedido</h2>
 
@@ -107,11 +113,12 @@ Detalhes do pedido
 
     {% if pedido.status not in ["entregue", "cancelado"] %}
 
-        <section class="auth-card">
+        <section class="painel">
 
             <h2>Atualizar status</h2>
 
             <form
+                class="formulario"
                 method="post"
                 action="{{ url_for(
                     'pedido.alterar_status',
@@ -147,7 +154,7 @@ Detalhes do pedido
 
                 </select>
 
-                <button type="submit">
+                <button type="submit" class="botao primario">
                     Atualizar status
                 </button>
 
@@ -162,7 +169,7 @@ Detalhes do pedido
 
 {% if pode_cancelar %}
 
-    <section class="auth-card">
+    <section class="painel">
 
         <h2>Cancelar pedido</h2>
 
@@ -179,7 +186,7 @@ Detalhes do pedido
             onsubmit="return confirm('Deseja realmente cancelar este pedido?')"
         >
 
-            <button type="submit">
+            <button type="submit" class="botao botao--perigo">
                 Cancelar pedido
             </button>
 
@@ -190,8 +197,12 @@ Detalhes do pedido
 {% endif %}
 
 
-<a href="{{ url_for('pedido.listar') }}">
-    Voltar ao histórico
-</a>
+<div class="acoes-finais">
+    <a class="botao secundario" href="{{ url_for('pedido.listar') }}">
+        Voltar ao histórico
+    </a>
+</div>
+
+</div>
 
 {% endblock %}

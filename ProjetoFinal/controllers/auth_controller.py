@@ -3,7 +3,7 @@
 import math
 import time
 
-from psycopg import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from flask import (
     Blueprint,
@@ -28,27 +28,27 @@ from utils import ip_cliente
 from utils import salvar_imagem
 from utils import validar_nova_senha
 
-# Foto usada quando nenhuma imagem é enviada.
+# Foto padrão quando não envia imagem
 FOTO_PADRAO = "images/fotos_perfil/usuarios/template_usuarios.jpeg"
 
-# Cria o Blueprint responsável pela autenticação.
+# Blueprint de autenticação
 auth_bp = Blueprint("auth", __name__)
 
 
 def _iniciar_sessao(usuario_id, nome, cargo, trocar_senha=False):
     """Cria a sessão da pessoa que acabou de entrar."""
 
-    # Remove dados antigos da sessão.
+    # Limpa dados antigos da sessão
     session.clear()
 
     session["usuario_id"] = usuario_id
     session["usuario_nome"] = nome
     session["cargo"] = cargo
 
-    # Base do timeout de inatividade (ver app.py).
+    # Início do timeout de inatividade (ver app.py)
     session["ultima_atividade"] = int(time.time())
 
-    # Senha temporária: só deixa navegar depois de trocar a senha.
+    # Senha temporária: só navega depois de trocar a senha
     if trocar_senha:
         session["trocar_senha"] = True
 
@@ -56,8 +56,7 @@ def _iniciar_sessao(usuario_id, nome, cargo, trocar_senha=False):
 def _destino_apos_login(usuario_id, cargo, proxima=None):
     """Para onde a pessoa vai depois de entrar."""
 
-    # Cozinheiro cadastrado pelo administrador ainda não tem perfil:
-    # leva direto para o cadastro do perfil.
+    # Cozinheiro novo ainda sem perfil: vai direto pro cadastro do perfil
     if (
         cargo == "cozinheiro"
         and perfil_chef_model.perfil_id(usuario_id) is None
@@ -97,17 +96,14 @@ def login():
         request.args.get("proxima") or request.form.get("proxima")
     )
 
-    # Se o formulário foi enviado.
     if request.method == "POST":
 
-        # Obtém o usuário informado.
         nome_usuario = request.form.get("usuario", "").strip()[:64]
 
-        # Obtém a senha.
         senha = request.form.get("senha", "")
 
-        # As tentativas são contadas por usuário (protege a conta) e por IP
-        # (impede testar muitos usuários diferentes a partir do mesmo lugar).
+        # Conta tentativas por usuário e por IP
+        # (assim não dá pra testar vários usuários do mesmo lugar)
         chave_usuario = f"usuario:{nome_usuario.lower()}"
         chave_ip = f"ip:{ip_cliente()}"
 
@@ -124,10 +120,9 @@ def login():
 
             return render_template("login.html", proxima=proxima), 429
 
-        # Procura o usuário no banco.
         usuario = usuario_model.buscar_por_usuario(nome_usuario)
 
-        # Verifica se o usuário existe e se a senha está correta.
+        # Confere usuário e senha
         if usuario and check_password_hash(usuario["senha_hash"], senha):
 
             login_model.limpar(chave_usuario)
@@ -141,7 +136,8 @@ def login():
 
             if usuario["senha_temporaria"]:
                 flash(
-                    "Defina uma nova senha.",
+                    "Você entrou com uma senha temporária. "
+                    "Defina uma nova senha para continuar.",
                     "aviso"
                 )
 
@@ -153,7 +149,7 @@ def login():
                 )
             )
 
-        # Login inválido: conta a falha.
+        # Login errado: conta a falha
         bloqueio = max(
             login_model.registrar_falha(chave_usuario),
             login_model.registrar_falha(chave_ip)
@@ -168,10 +164,9 @@ def login():
 
             return render_template("login.html", proxima=proxima), 429
 
-        # A mensagem é a mesma para usuário inexistente e senha errada.
+        # Mesma mensagem para usuário inexistente e senha errada
         flash("Usuário ou senha inválidos.", "erro")
 
-    # Exibe a tela de login.
     return render_template("login.html", proxima=proxima)
 
 
@@ -184,17 +179,16 @@ def _cadastrar_usuario(cargos_permitidos, template):
     if request.method != "POST":
         return render_template(template, dados={})
 
-    # Obtém os dados enviados.
     nome = request.form.get("nome", "").strip()
     nome_usuario = request.form.get("usuario", "").strip()
     senha = request.form.get("senha", "")
     confirmacao = request.form.get("confirmar_senha", "")
     cargo = request.form.get("cargo", "").strip()
 
-    # Mantém o que foi digitado (menos as senhas) se houver erro.
+    # Se der erro, mantém o digitado (menos as senhas)
     dados = {"nome": nome, "usuario": nome_usuario, "cargo": cargo}
 
-    # Validação básica dos campos.
+    # Validação dos campos
     if (
         len(nome) < 2
         or len(nome_usuario) < 3
@@ -203,7 +197,7 @@ def _cadastrar_usuario(cargos_permitidos, template):
         flash("Preencha todos os campos corretamente.", "erro")
         return render_template(template, dados=dados)
 
-    # Regras de senha + confirmação.
+    # Regras de senha e confirmação
     erro_senha = validar_nova_senha(senha, confirmacao)
 
     if erro_senha:
@@ -212,15 +206,14 @@ def _cadastrar_usuario(cargos_permitidos, template):
 
     try:
 
-        # A foto é guardada no banco (a Vercel não permite gravar em disco).
+        # Foto vai pro banco
         foto_url = salvar_imagem(
             request.files.get("foto_perfil")
         ) or FOTO_PADRAO
 
-        # Transforma a senha em hash antes de armazená-la.
+        # Guarda a senha em hash
         senha_hash = generate_password_hash(senha)
 
-        # Cria o usuário.
         usuario_id = usuario_model.criar(
             nome,
             nome_usuario,
@@ -231,14 +224,14 @@ def _cadastrar_usuario(cargos_permitidos, template):
 
     except ValueError as erro:
 
-        # Imagem inválida.
+        # Imagem inválida
         flash(str(erro), "erro")
         return render_template(template, dados=dados)
 
     except IntegrityError:
 
-        # O usuário possui uma restrição UNIQUE.
-        flash("Defina outro nome de usuário.", "erro")
+        # Usuário repetido (UNIQUE)
+        flash("Esse nome de usuário já está em uso.", "erro")
         return render_template(template, dados=dados)
 
     return usuario_id, cargo
@@ -252,13 +245,13 @@ def cadastro():
         "cadastro_usuario.html"
     )
 
-    # Formulário (GET) ou erro de validação: já é uma resposta.
+    # GET ou erro de validação: já é uma resposta
     if not isinstance(resultado, tuple):
         return resultado
 
     usuario_id, cargo = resultado
 
-    # Entra automaticamente com a conta recém-criada.
+    # Já entra com a conta nova
     _iniciar_sessao(usuario_id, request.form.get("nome", "").strip(), cargo)
 
     if cargo == "cliente":
@@ -276,14 +269,14 @@ def cadastro_adm():
         "adm_cadastro_usuario.html"
     )
 
-    # Formulário (GET) ou erro de validação: já é uma resposta.
+    # GET ou erro de validação: já é uma resposta
     if not isinstance(resultado, tuple):
         return resultado
 
     usuario_id, cargo = resultado
 
-    # Mantém o comportamento original: cliente criado por aqui
-    # assume a sessão e segue para o cadastro de endereço (atendimento).
+    # Mesmo comportamento de antes: o cliente criado aqui assume a sessão
+    # e segue para o cadastro de endereço
     if cargo == "cliente":
 
         _iniciar_sessao(
@@ -313,8 +306,7 @@ def alterar_senha():
         nova = request.form.get("senha", "")
         confirmacao = request.form.get("confirmar_senha", "")
 
-        # Limita tentativas de "senha atual" (evita adivinhar a senha
-        # a partir de uma sessão aberta).
+        # Limita tentativas da senha atual (evita adivinhar com a sessão aberta)
         chave = f"senha:{usuario['id']}"
         espera = login_model.segundos_de_bloqueio([chave])
 
@@ -350,7 +342,7 @@ def alterar_senha():
         login_model.limpar(chave)
         session.pop("trocar_senha", None)
 
-        flash("Senha alterada.", "sucesso")
+        flash("Senha alterada com sucesso.", "sucesso")
 
         return redirect(
             _destino_apos_login(usuario["id"], usuario["cargo"])
@@ -370,13 +362,13 @@ def esqueci_senha():
 
     if request.method == "POST":
 
-        # Cada pedido conta como tentativa (evita encher a lista do admin).
+        # Cada pedido conta como tentativa (não enche a lista do admin)
         chave_ip = f"reset:{ip_cliente()}"
         espera = login_model.segundos_de_bloqueio([chave_ip])
 
         if espera:
             flash(
-                "Aguarde"
+                "Muitos pedidos seguidos. Aguarde "
                 f"{_texto_espera(espera)} e tente novamente.",
                 "erro"
             )
@@ -391,9 +383,10 @@ def esqueci_senha():
                 nome_usuario, int(time.time())
             )
 
-        # Mesma resposta exista o usuário ou não (não revela quem tem conta).
+        # Mesma resposta exista a conta ou não (não revela quem tem conta)
         flash(
-            "Pedido registrado. Aguarde, o administrador gerará uma senha temporária.",
+            "Pedido registrado. Se o usuário existir, o administrador "
+            "foi avisado e vai gerar uma senha temporária para você.",
             "sucesso"
         )
 
@@ -405,7 +398,7 @@ def esqueci_senha():
 @auth_bp.post("/logout")
 def logout():
 
-    # Remove todos os dados da sessão.
+    # Limpa a sessão
     session.clear()
 
     flash("Sessão encerrada.", "sucesso")

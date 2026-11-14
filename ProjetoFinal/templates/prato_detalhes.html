@@ -49,7 +49,6 @@
     <img
         src="{{ foto_src(prato.foto_url, 'images/fotos_perfil/produtos/template_produtos.jpeg') }}"
         alt="{{ prato.nome }}"
-        style="width: 100%; max-width: 500px;"
     >
 
     <h2>Sobre o prato</h2>
@@ -90,7 +89,7 @@
 
     <h2>Preço</h2>
 
-    <p>
+    <p class="preco">
         {{ prato.preco_centavos|moeda }}
     </p>
 
@@ -119,7 +118,7 @@
             required
         >
 
-        <button type="submit">
+        <button type="submit" class="botao primario">
             Adicionar ao carrinho
         </button>
 

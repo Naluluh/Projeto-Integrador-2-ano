@@ -12,7 +12,7 @@ from flask import (
     url_for
 )
 
-from psycopg import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from werkzeug.security import generate_password_hash
 
@@ -23,7 +23,7 @@ from utils import salvar_imagem
 from utils import validar_nova_senha
 
 
-# Cria o Blueprint responsável pelas rotas de funcionários.
+# Blueprint dos funcionários
 usuario_bp = Blueprint(
     "usuario",
     __name__,
@@ -50,10 +50,8 @@ def listar():
 @administrador_required
 def novo():
 
-    # Se o formulário foi enviado.
     if request.method == "POST":
 
-        # Obtém os dados enviados pelo formulário.
         nome = request.form.get(
             "nome",
             ""
@@ -79,15 +77,14 @@ def novo():
             ""
         ).strip()
 
-        # Cargos que podem ser criados
-        # pelo administrador.
+        # Cargos que o admin pode criar
         cargos_permitidos = {
             "cliente",
             "cozinheiro",
             "administrador"
         }
 
-        # Validação dos campos.
+        # Validação dos campos
         erro_senha = validar_nova_senha(senha, confirmacao)
 
         if (
@@ -107,19 +104,16 @@ def novo():
 
             try:
 
-                # A foto é guardada no banco (a Vercel não permite
-                # gravar arquivos em disco).
+                # Foto vai pro banco
                 foto_url = salvar_imagem(
                     request.files.get("foto_perfil")
                 ) or "images/fotos_perfil/usuarios/template_usuarios.jpeg"
 
-                # Transforma a senha em hash
-                # antes de armazená-la.
+                # Guarda a senha em hash
                 senha_hash = generate_password_hash(
                     senha
                 )
 
-                # Cria o funcionário no banco.
                 usuario_model.criar(
                     nome,
                     nome_usuario,
@@ -129,7 +123,7 @@ def novo():
                 )
 
                 flash(
-                    "Usuário cadastrado.",
+                    "Funcionário cadastrado com sucesso.",
                     "sucesso"
                 )
 
@@ -140,8 +134,7 @@ def novo():
 
             except ValueError as erro:
 
-                # Mostra erros de validação
-                # retornados pelo Model.
+                # Erros de validação do model
                 flash(
                     str(erro),
                     "erro"
@@ -149,13 +142,12 @@ def novo():
 
             except IntegrityError:
 
-                # O nome de usuário já existe (restrição UNIQUE).
+                # Usuário repetido (UNIQUE)
                 flash(
-                    "Nome de usuário indisponível.",
+                    "Esse nome de usuário já está em uso.",
                     "erro"
                 )
 
-    # Exibe o formulário.
     return render_template(
         "usuario_form.html",
         usuario=None
@@ -169,20 +161,16 @@ def novo():
 @administrador_required
 def editar(usuario_id):
 
-    # Busca o funcionário pelo ID.
     usuario = usuario_model.buscar(
         usuario_id
     )
 
-    # Se o funcionário não existir,
-    # retorna 404.
+    # Não achou: 404
     if usuario is None:
         abort(404)
 
-    # Se o formulário foi enviado.
     if request.method == "POST":
 
-        # Obtém os dados enviados.
         nome = request.form.get(
             "nome",
             ""
@@ -208,14 +196,14 @@ def editar(usuario_id):
             ""
         ).strip()
 
-        # Cargos permitidos.
+        # Cargos permitidos
         cargos_permitidos = {
             "cliente",
             "cozinheiro",
             "administrador"
         }
 
-        # Valida os campos obrigatórios.
+        # Campos obrigatórios
         if (
             len(nome) < 2
             or len(nome_usuario) < 3
@@ -235,8 +223,7 @@ def editar(usuario_id):
                     request.files.get("foto_perfil")
                 )
 
-                # Se uma nova senha foi informada,
-                # cria um novo hash.
+                # Se veio senha nova, gera outro hash
                 if senha:
 
                     erro_senha = validar_nova_senha(senha, confirmacao)
@@ -250,12 +237,11 @@ def editar(usuario_id):
 
                 else:
 
-                    # Mantém a senha antiga.
+                    # Mantém a senha antiga
                     senha_hash = usuario[
                         "senha_hash"
                     ]
 
-                # Atualiza os dados.
                 usuario_model.atualizar(
                     usuario_id,
                     nome,
@@ -266,7 +252,7 @@ def editar(usuario_id):
                 )
 
                 flash(
-                    "Usuário atualizado.",
+                    "Funcionário atualizado com sucesso.",
                     "sucesso"
                 )
 
@@ -283,19 +269,17 @@ def editar(usuario_id):
 
             except IntegrityError:
 
-                # O nome de usuário já existe (restrição UNIQUE).
+                # Usuário repetido (UNIQUE)
                 flash(
-                    "Nome de usuário indisponível.",
+                    "Esse nome de usuário já está em uso.",
                     "erro"
                 )
 
-        # Exibe novamente o formulário.
         return render_template(
             "usuario_form.html",
             usuario=usuario
         )
 
-    # Exibe o formulário preenchido.
     return render_template(
         "usuario_form.html",
         usuario=usuario
@@ -308,7 +292,6 @@ def editar(usuario_id):
 @administrador_required
 def excluir(usuario_id):
 
-    # Verifica se o funcionário existe.
     usuario = usuario_model.buscar(
         usuario_id
     )
@@ -316,8 +299,7 @@ def excluir(usuario_id):
     if usuario is None:
         abort(404)
 
-    # Impede que o administrador exclua
-    # a própria conta.
+    # Admin não pode excluir a própria conta
     if usuario_id == session.get(
         "usuario_id"
     ):
@@ -331,7 +313,6 @@ def excluir(usuario_id):
             url_for("usuario.listar")
         )
 
-    # Remove o funcionário do banco.
     try:
         usuario_model.excluir(
             usuario_id
@@ -350,7 +331,7 @@ def excluir(usuario_id):
         )
 
     flash(
-        "Funcionário excluído.",
+        "Funcionário excluído com sucesso.",
         "sucesso"
     )
 

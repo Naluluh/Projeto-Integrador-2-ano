@@ -80,8 +80,7 @@ def incluir_no_carrinho(produto, quantidade):
             "quantidade": quantidade
         })
 
-    # Verifica o estoque do carrinho inteiro (pratos diferentes podem
-    # disputar o mesmo ingrediente).
+    # Confere o estoque do carrinho todo (pratos diferentes podem usar o mesmo ingrediente)
     try:
         plano, _consumos = pedido_model.planejar(itens)
     except ValueError as erro:

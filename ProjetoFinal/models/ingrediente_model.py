@@ -11,7 +11,7 @@ def listar(busca=""):
         """
         SELECT *
         FROM ingredientes
-        WHERE nome ILIKE ?
+        WHERE norm(nome) LIKE norm(?)
         ORDER BY nome
         """,
         (termo,)
@@ -27,10 +27,8 @@ def buscar(ingrediente_id):
 
 
 def criar(nome, unidade, estoque):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Cadastra o ingrediente.
     db.execute(
         """
         INSERT INTO ingredientes (nome, unidade, estoque)
@@ -39,15 +37,12 @@ def criar(nome, unidade, estoque):
         (nome, unidade, estoque)
     )
 
-    # Confirma a alteração.
     db.commit()
 
 
 def atualizar(ingrediente_id, nome, unidade, estoque):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Atualiza os dados do ingrediente.
     db.execute(
         """
         UPDATE ingredientes
@@ -59,21 +54,17 @@ def atualizar(ingrediente_id, nome, unidade, estoque):
         (nome, unidade, estoque, ingrediente_id)
     )
 
-    # Confirma a alteração.
     db.commit()
 
 
 def excluir(ingrediente_id):
-    # Obtém a conexão com o banco.
     db = get_db()
 
-    # Exclui o ingrediente.
     db.execute(
         "DELETE FROM ingredientes WHERE id = ?",
         (ingrediente_id,)
     )
 
-    # Confirma a alteração.
     db.commit()
 
 

@@ -21,7 +21,7 @@ Pratos
     </div>
 
     <a
-        class="botao primario"
+        class="botao botao--escuro"
         href="{{ url_for('prato.novo') }}"
     >
         + Novo prato
@@ -45,7 +45,7 @@ Pratos
             aria-label="Pesquisar"
         >
 
-        <button class="botao">
+        <button class="botao primario" type="submit">
             Pesquisar
         </button>
 
@@ -129,13 +129,14 @@ Pratos
                     >
                         <input type="hidden" name="proxima" value="{{ url_for('prato.listar') }}">
                         <input type="hidden" name="ativo" value="{{ '0' if p.ativo else '1' }}">
-                        <button class="link-button">
+                        <button class="botao secundario botao--mini" type="submit">
                             {{ 'Tornar indisponível' if p.ativo else 'Tornar disponível' }}
                         </button>
                     </form>
                     {% endif %}
 
                     <a
+                        class="botao botao--neutro botao--mini"
                         href="{{
                             url_for(
                                 'prato.editar',
@@ -163,7 +164,7 @@ Pratos
                     >
 
                         <button
-                            class="perigo link-button"
+                            class="botao botao--perigo botao--mini"
                         >
                             Excluir
                         </button>

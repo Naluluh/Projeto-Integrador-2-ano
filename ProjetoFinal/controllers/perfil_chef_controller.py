@@ -62,7 +62,7 @@ def cadastrar():
                 categorias=pegar_categorias()
             )
 
-        flash("Perfil cadastrado.", "sucesso")
+        flash("Perfil cadastrado com sucesso.", "sucesso")
         return redirect(url_for("main.inicio"))
 
     return render_template(
@@ -148,7 +148,8 @@ def remover_categoria(categoria_id):
         return redirect(url_for("perfil_chef.categorias"))
 
     flash(
-        "Operação concluída",
+        "Você deixou de ser responsável por esta categoria. "
+        "Os pedidos que você já preparou continuam no histórico.",
         "sucesso"
     )
 

@@ -18,7 +18,7 @@ main_bp = Blueprint(
 @main_bp.get("/")
 def inicio():
 
-    # Obtém as quantidades para o painel.
+    # Quantidades do painel
     total_ingredientes = ingrediente_model.quantidade_total()
     total_pratos = prato_model.quantidade_total()
     total_pedidos=pedido_model.quantidade_visivel(
@@ -26,10 +26,9 @@ def inicio():
     session.get("usuario_id")
 )
 
-    # Obtém o cargo do usuário que está logado.
+    # Cargo de quem está logado
     cargo = session.get("cargo")
 
-    # Cliente.
     if cargo == "cliente":
         return render_template(
             "menu_cliente.html",
@@ -38,7 +37,6 @@ def inicio():
             total_pedidos=total_pedidos
         )
 
-    # Cozinheiro.
     elif cargo == "cozinheiro":
         return render_template(
             "menu_cozinheiro.html",
@@ -47,7 +45,6 @@ def inicio():
             total_pedidos=total_pedidos
         )
 
-    # Administrador.
     elif cargo == "administrador":
         return render_template(
             "menu_adm.html",

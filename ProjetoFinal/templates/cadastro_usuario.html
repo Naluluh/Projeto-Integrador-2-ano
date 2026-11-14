@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% from "_macros.html" import campo_senha %}
+{% from "_formas.html" import salada_publica %}
 
 {% block titulo %}
 Cadastro
 {% endblock %}
 
 {% block conteudo %}
+
+{{ salada_publica() }}
 
 <section class="auth-card">
 
@@ -77,7 +80,7 @@ Cadastro
         </label>
 
         <button
-            class="botao primario"
+            class="botao primario botao--grande"
             type="submit"
         >
             Cadastrar usuário

@@ -17,7 +17,7 @@ def listar(busca="", incluir_inativos=True):
                ) AS qtd_chefs
         FROM produtos
         JOIN categorias ON produtos.categoria_id = categorias.id
-        WHERE (produtos.nome ILIKE ? OR categorias.nome ILIKE ?)
+        WHERE (norm(produtos.nome) LIKE norm(?) OR norm(categorias.nome) LIKE norm(?))
           AND (produtos.ativo OR ?)
         ORDER BY produtos.nome
     """, (termo, termo, bool(incluir_inativos))).fetchall()
@@ -76,7 +76,7 @@ def atualizar(produto_id, nome, descricao, categoria_id,
 def listar_para_pedido():
     return get_db().execute("""
         SELECT produtos.*,
-               STRING_AGG(usuarios.nome, ', ') AS chef_nome
+               GROUP_CONCAT(usuarios.nome, ', ') AS chef_nome
         FROM produtos
         LEFT JOIN produto_chefs
             ON produtos.id = produto_chefs.produto_id
@@ -133,8 +133,9 @@ def listar_ingredientes(produto_id):
             i.nome,
             i.unidade,
             pi.quantidade,
-            STRING_AGG(
-                ia.id::text || ':' || ia.nome || ':' || pia.quantidade::text,
+            GROUP_CONCAT(
+                CAST(ia.id AS TEXT) || ':' || ia.nome || ':'
+                || CAST(pia.quantidade AS TEXT),
                 '|'
             ) AS alternativas
         FROM produto_ingredientes AS pi

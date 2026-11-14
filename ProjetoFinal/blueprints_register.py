@@ -1,4 +1,3 @@
-#blueprints_register.py
 
 def registrar_blueprints(app):
         from controllers.auth_controller import auth_bp

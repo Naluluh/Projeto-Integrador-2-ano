@@ -70,7 +70,7 @@ Usuários - Sabor & Clic
 
                             <td class="acoes">
 
-                                <a href="{{ url_for('usuario.editar', usuario_id=usuario['id']) }}">
+                                <a class="botao botao--neutro botao--mini" href="{{ url_for('usuario.editar', usuario_id=usuario['id']) }}">
                                     Editar
                                 </a>
 
@@ -81,7 +81,7 @@ Usuários - Sabor & Clic
                                         action="{{ url_for('usuario.redefinir_senha', usuario_id=usuario['id']) }}"
                                         onsubmit="return confirm('Gerar uma senha temporária? A senha atual deixará de funcionar.')"
                                     >
-                                        <button class="link-button">
+                                        <button class="botao secundario botao--mini" type="submit">
                                             Redefinir senha
                                         </button>
                                     </form>
@@ -91,7 +91,7 @@ Usuários - Sabor & Clic
                                         action="{{ url_for('usuario.excluir', usuario_id=usuario['id']) }}"
                                         onsubmit="return confirm('Excluir este usuário?')"
                                     >
-                                        <button class="perigo link-button">
+                                        <button class="botao botao--perigo botao--mini" type="submit">
                                             Excluir
                                         </button>
                                     </form>

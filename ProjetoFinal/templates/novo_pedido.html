@@ -65,7 +65,7 @@ Novo pedido
         </label>
 
 
-        <button class="botao primario">
+        <button class="botao primario" type="submit">
             Adicionar
         </button>
 
@@ -132,7 +132,7 @@ Novo pedido
                             )
                         }}">
 
-                        <button class="perigo link-button">
+                        <button class="botao botao--perigo botao--mini">
                             Remover
                         </button>
 
@@ -176,7 +176,7 @@ Novo pedido
 
         <form method="post" action="{{ url_for('pedido.limpar') }}">
 
-            <button class="botao secundario" {{ 'disabled' if not carrinho }}>
+            <button class="botao secundario" type="submit" {{ 'disabled' if not carrinho }}>
                 Limpar
             </button>
 
@@ -208,7 +208,7 @@ Novo pedido
                 {% else %}
 
                 <p>Nenhum endereço cadastrado.</p>
-                <a href="{{ url_for('endereco.cadastrar') }}">
+                <a class="botao primario" href="{{ url_for('endereco.cadastrar') }}">
                     Cadastrar endereço
                 </a>
 
